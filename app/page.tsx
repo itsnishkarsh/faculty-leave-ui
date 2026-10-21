@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -36,6 +37,7 @@ import {
   Calendar,
   Plus,
   Search,
+  MessageCircle,
 } from "lucide-react";
 import { LeaveRequest, readRequests, saveRequest, subscribeToLeaveRequests } from "@/lib/leave-store";
 import { downloadCsv } from "@/lib/download-csv";
@@ -403,6 +405,7 @@ function AppleFacultyDashboard() {
                     </div>
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
+                    <Link href={`/leave/${item.id}`} className="inline-flex items-center gap-1.5 text-[11px] font-medium text-[#0071e3] hover:underline"><MessageCircle className="h-3.5 w-3.5" /> Chat</Link>
                     <span
                       className={`text-[11px] font-medium px-2.5 py-0.5 rounded-full border ${item.status === "Approved" ? "text-[#1d8a42] bg-[#34c759]/10 border-[#34c759]/20" : item.status === "Rejected" ? "text-[#b42318] bg-red-500/10 border-red-500/20" : "text-[#b25e00] bg-[#ff9500]/10 border-[#ff9500]/20"}`}
                     >

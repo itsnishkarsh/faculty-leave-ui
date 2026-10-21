@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { ArrowLeft, Check, Clock3, X } from "lucide-react";
+import { ArrowLeft, Check, Clock3, MessageCircle, X } from "lucide-react";
 import { LeaveRequest, readRequests, subscribeToLeaveRequests, updateRequestStatus } from "@/lib/leave-store";
 import { ProtectedContent, SignOutButton } from "@/components/protected-content";
 import { useAuth } from "@/components/auth-provider";
@@ -72,6 +72,7 @@ function ApprovalQueue() {
                   <p className="text-xs text-[#86868b]">Substitute: {request.substitute || "Not specified"} · Submitted {new Date(request.submittedAt).toLocaleDateString("en-IN")}</p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2 self-start">
+                  <Link href={`/leave/${request.id}`} aria-label={`Open conversation for ${request.faculty}'s leave request`} className="inline-flex items-center gap-1.5 rounded-full border border-black/10 px-3 py-2 text-sm font-medium hover:bg-black/[0.04]"><MessageCircle className="h-4 w-4" /><span className="hidden sm:inline">Chat</span></Link>
                   <button disabled={busyId === request.id} onClick={() => decide(request.id, "Approved")} className="inline-flex items-center gap-1.5 rounded-full bg-[#1d8a42] px-4 py-2 text-sm font-medium text-white hover:bg-[#167638] disabled:opacity-50"><Check className="h-4 w-4" /> {busyId === request.id ? "Saving…" : "Approve"}</button>
                   <button disabled={busyId === request.id} onClick={() => decide(request.id, "Rejected")} className="inline-flex items-center gap-1.5 rounded-full border border-black/10 px-4 py-2 text-sm font-medium hover:bg-black/[0.04] disabled:opacity-50"><X className="h-4 w-4" /> Reject</button>
                 </div>
@@ -80,7 +81,7 @@ function ApprovalQueue() {
           ))}
         </section>
 
-        {decided.length > 0 && <section className="space-y-3"><h2 className="text-lg font-semibold">Recently reviewed</h2>{decided.map((request) => <div key={request.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-black/[0.05] bg-white/70 px-4 py-3 text-sm"><span className="font-medium">{request.faculty} · {request.category}</span><span className={request.status === "Approved" ? "text-[#1d8a42]" : "text-[#c23b32]"}>{request.status}</span></div>)}</section>}
+        {decided.length > 0 && <section className="space-y-3"><h2 className="text-lg font-semibold">Recently reviewed</h2>{decided.map((request) => <div key={request.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-black/[0.05] bg-white/70 px-4 py-3 text-sm"><span className="font-medium">{request.faculty} · {request.category}</span><div className="flex items-center gap-3"><span className={request.status === "Approved" ? "text-[#1d8a42]" : "text-[#c23b32]"}>{request.status}</span><Link href={`/leave/${request.id}`} aria-label={`Open conversation for ${request.faculty}'s leave request`} className="inline-flex items-center gap-1 text-xs font-medium text-[#0071e3]"><MessageCircle className="h-3.5 w-3.5" /> Chat</Link></div></div>)}</section>}
       </div>
     </main>
   );
