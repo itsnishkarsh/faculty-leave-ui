@@ -16,7 +16,7 @@ npm run dev
 
 ## Database setup
 
-Create `profiles` and `leave_requests` tables and the new-user profile trigger in the Supabase SQL Editor. Enable RLS on both tables. After the initial schema exists, run `supabase/migrations/202610210001_role_management_departments.sql` in the Supabase SQL Editor. It adds department-scoped HOD access and the admin-only role assignment function used by the Admin console.
+Create `profiles` and `leave_requests` tables and the new-user profile trigger in the Supabase SQL Editor. Enable RLS on both tables. After the initial schema exists, run migrations `202610210001_role_management_departments.sql` and `202610210002_allowed_departments.sql` from `supabase/migrations` in the Supabase SQL Editor. They add department-scoped HOD access, the admin-only role assignment function, and the allowed department list used by the Admin console.
 
 New Auth sign-ups receive the `faculty` role. Administrators assign departments and `hod` / `admin` roles from the Admin console after verifying the person's responsibilities. The database function and RLS policies enforce those permissions; the public sign-up form never accepts an elevated role.
 

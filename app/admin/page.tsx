@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowRight, Check, ClipboardList, Search, ShieldCheck, Users } from "lucide-react";
 import { listPortalUsers, PortalProfile, setPortalAccess, UserRole } from "@/lib/auth-store";
+import { DEPARTMENTS, isDepartment } from "@/lib/departments";
 import { LeaveRequest, readRequests, subscribeToLeaveRequests } from "@/lib/leave-store";
 import { ProtectedContent, SignOutButton } from "@/components/protected-content";
 import { useAuth } from "@/components/auth-provider";
@@ -53,12 +54,10 @@ function AdminOverview() {
 
   const pending = requests.filter((request) => request.status === "Pending").length;
   const roleCounts = { faculty: users.filter((user) => user.role === "faculty").length, hod: users.filter((user) => user.role === "hod").length, admin: users.filter((user) => user.role === "admin").length };
-  const departments = [...new Set(users.map((user) => user.department?.trim()).filter((department): department is string => Boolean(department)))].sort((a, b) => a.localeCompare(b));
-
   async function saveAccess(user: PortalProfile) {
     const draft = drafts[user.id] ?? { role: user.role, department: user.department ?? "" };
-    if (draft.role === "hod" && !draft.department.trim()) {
-      setError("Choose a department before assigning HOD access.");
+    if (draft.role !== "admin" && !isDepartment(draft.department)) {
+      setError(draft.role === "hod" ? "Choose an approved department before assigning HOD access." : "Choose an approved department for this faculty account.");
       return;
     }
     setSavingId(user.id);
@@ -110,13 +109,12 @@ function AdminOverview() {
             const changed = draft.role !== user.role || draft.department !== (user.department ?? "");
             return <div key={user.id} className="grid gap-3 px-5 py-4 sm:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1.5fr)] sm:items-center sm:gap-4 sm:px-6">
             <div className="min-w-0"><p className="truncate text-sm font-medium">{user.name || "Unnamed account"}</p><p className="truncate text-xs text-[#86868b]">{user.email}</p></div>
-            <label className="space-y-1"><span className="text-[10px] font-medium uppercase tracking-wide text-[#86868b] sm:hidden">Department</span><input list="department-options" aria-label={`Department for ${user.name}`} value={draft.department} onChange={(event) => setDrafts((current) => ({ ...current, [user.id]: { ...draft, department: event.target.value } }))} placeholder="e.g. Computer Engineering" className="h-9 w-full rounded-lg border border-black/10 px-2.5 text-xs outline-none focus:border-blue-500" /></label>
+            <label className="space-y-1"><span className="text-[10px] font-medium uppercase tracking-wide text-[#86868b] sm:hidden">Department</span><select aria-label={`Department for ${user.name}`} value={draft.department} onChange={(event) => setDrafts((current) => ({ ...current, [user.id]: { ...draft, department: event.target.value } }))} className="h-9 w-full rounded-lg border border-black/10 bg-white px-2.5 text-xs outline-none focus:border-blue-500">{user.department && !isDepartment(user.department) ? <option value={user.department}>Replace invalid value: {user.department}</option> : <option value="">Choose department</option>}{DEPARTMENTS.map((department) => <option key={department} value={department}>{department}</option>)}</select></label>
             <div className="flex flex-wrap items-center gap-2"><label className="sr-only" htmlFor={`role-${user.id}`}>Access level for {user.name}</label><select id={`role-${user.id}`} value={draft.role} onChange={(event) => setDrafts((current) => ({ ...current, [user.id]: { ...draft, role: event.target.value as UserRole } }))} className={`h-9 rounded-full px-3 text-xs font-medium outline-none focus:ring-2 focus:ring-blue-500/30 ${roleStyles[draft.role]}`}><option value="faculty">Faculty</option><option value="hod">Head of Department</option><option value="admin">Administrator</option></select>{changed && <button onClick={() => void saveAccess(user)} disabled={savingId === user.id} className="h-9 rounded-lg bg-[#1d1d1f] px-3 text-xs font-medium text-white hover:bg-black/80 disabled:opacity-50">{savingId === user.id ? "Saving…" : "Save access"}</button>}</div>
           </div>})}
           {!loading && visibleUsers.length === 0 && <p className="px-6 py-10 text-center text-sm text-[#86868b]">{users.length ? "No accounts match those filters." : "Accounts will appear here after users sign up."}</p>}
           {loading && <p className="px-6 py-10 text-center text-sm text-[#86868b]">Loading portal accounts…</p>}
         </div>
-        <datalist id="department-options">{departments.map((department) => <option key={department} value={department} />)}</datalist>
       </section>
 
       <section className="grid gap-4 lg:grid-cols-2">
@@ -126,8 +124,8 @@ function AdminOverview() {
           <p className="mt-4 text-xs leading-5 text-[#86868b]">Role changes are performed through a Supabase function that verifies the signed-in administrator. HODs must have a department; they only see and review that department’s leave requests.</p>
         </article>
         <article className="rounded-3xl border border-blue-100 bg-blue-50/70 p-6">
-          <p className="text-xs font-semibold uppercase tracking-wider text-blue-700">Access controls</p><h2 className="mt-2 text-lg font-semibold">Assign roles with department scope</h2><p className="mt-2 text-sm leading-6 text-[#55555a]">Choose a department for each faculty member. When you assign HOD, that HOD’s approval queue is limited to faculty in the same department.</p>
-          <div className="mt-4 rounded-2xl border border-blue-100 bg-white/80 p-4"><p className="text-sm font-medium">Database migration required</p><p className="mt-1 text-xs leading-5 text-[#6e6e73]">Run <code>supabase/migrations/202610210001_role_management_departments.sql</code> in Supabase SQL Editor before saving role changes. It adds the department field, admin-only role function, and department-aware RLS policies.</p></div>
+          <p className="text-xs font-semibold uppercase tracking-wider text-blue-700">Access controls</p><h2 className="mt-2 text-lg font-semibold">Assign roles with department scope</h2><p className="mt-2 text-sm leading-6 text-[#55555a]">Choose only from the institution’s department list. When you assign HOD, that HOD’s approval queue is limited to faculty assigned to the same department.</p>
+          <div className="mt-4 rounded-2xl border border-blue-100 bg-white/80 p-4"><p className="text-sm font-medium">Database migrations required</p><p className="mt-1 text-xs leading-5 text-[#6e6e73]">Run migrations <code>202610210001</code> and <code>202610210002</code> from the project’s <code>supabase/migrations</code> folder in Supabase SQL Editor before saving role changes.</p></div>
           <p className="mt-4 text-xs text-[#6e6e73]">To protect the last administrator account, the database blocks self-demotion and removal of the final admin.</p>
         </article>
       </section>
