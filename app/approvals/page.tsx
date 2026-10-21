@@ -1,24 +1,48 @@
 "use client";
 
 import Link from "next/link";
-import { useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
 import { ArrowLeft, Check, Clock3, X } from "lucide-react";
-import { getRequestsSnapshot, LeaveRequest, subscribeToRequests, updateRequestStatus } from "@/lib/leave-store";
+import { LeaveRequest, readRequests, subscribeToLeaveRequests, updateRequestStatus } from "@/lib/leave-store";
 import { ProtectedContent, SignOutButton } from "@/components/protected-content";
+import { useAuth } from "@/components/auth-provider";
 
 function prettyDate(value: string) {
   return new Date(`${value}T00:00:00`).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 }
 
 function ApprovalQueue() {
-  const snapshot = useSyncExternalStore(subscribeToRequests, getRequestsSnapshot, () => "[]");
-  const requests = JSON.parse(snapshot) as LeaveRequest[];
+  const { session } = useAuth();
+  const [requests, setRequests] = useState<LeaveRequest[]>([]);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    if (session) {
+      const load = () => {
+        void readRequests(session.role, session.id)
+          .then((items) => { if (active) setRequests(items); })
+          .catch((cause: unknown) => { if (active) setError(cause instanceof Error ? cause.message : "Unable to load requests."); });
+      };
+      load();
+      const unsubscribe = subscribeToLeaveRequests(load);
+      return () => { active = false; unsubscribe(); };
+    }
+    return () => { active = false; };
+  }, [session]);
 
   const pending = requests.filter((request) => request.status === "Pending");
   const decided = requests.filter((request) => request.status !== "Pending");
 
-  function decide(id: string, status: "Approved" | "Rejected") {
-    updateRequestStatus(id, status);
+  async function decide(id: string, status: "Approved" | "Rejected") {
+    if (!session) return;
+    try {
+      await updateRequestStatus(id, status, session.id);
+      setRequests(await readRequests(session.role, session.id));
+      setError("");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Unable to update this request.");
+    }
   }
 
   return (
@@ -29,6 +53,7 @@ function ApprovalQueue() {
           <div><p className="text-xs font-medium uppercase tracking-wider text-[#86868b]">Computer Science Department</p><h1 className="mt-1 text-3xl font-semibold tracking-tight">Leave approvals</h1></div>
           <span className="rounded-full bg-[#0071e3]/10 px-3 py-1.5 text-sm font-medium text-[#0071e3]">{pending.length} awaiting review</span>
         </header>
+        {error && <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
 
         <section className="space-y-3" aria-label="Pending requests">
           {pending.length === 0 ? <div className="rounded-2xl border border-black/[0.06] bg-white p-10 text-center"><Clock3 className="mx-auto h-7 w-7 text-[#86868b]" /><h2 className="mt-3 font-semibold">You’re all caught up</h2><p className="mt-1 text-sm text-[#86868b]">New faculty requests will appear here.</p></div> : pending.map((request) => (

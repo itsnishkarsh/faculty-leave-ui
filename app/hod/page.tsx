@@ -1,6 +1,6 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
 
 import {
   Users,
@@ -21,13 +21,30 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
-import { getRequestsSnapshot, LeaveRequest, subscribeToRequests } from "@/lib/leave-store";
+import { LeaveRequest, readRequests, subscribeToLeaveRequests } from "@/lib/leave-store";
 import { downloadCsv } from "@/lib/download-csv";
 import { ProtectedContent, SignOutButton } from "@/components/protected-content";
+import { useAuth } from "@/components/auth-provider";
 
 function HodDashboard() {
-  const snapshot = useSyncExternalStore(subscribeToRequests, getRequestsSnapshot, () => "[]");
-  const requests = JSON.parse(snapshot) as LeaveRequest[];
+  const { session } = useAuth();
+  const [requests, setRequests] = useState<LeaveRequest[]>([]);
+  const [requestError, setRequestError] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    if (session) {
+      const load = () => {
+        void readRequests(session.role, session.id)
+          .then((items) => { if (active) setRequests(items); })
+          .catch((cause: unknown) => { if (active) setRequestError(cause instanceof Error ? cause.message : "Unable to load requests."); });
+      };
+      load();
+      const unsubscribe = subscribeToLeaveRequests(load);
+      return () => { active = false; unsubscribe(); };
+    }
+    return () => { active = false; };
+  }, [session]);
 
   const pendingCount = requests.filter((request) => request.status === "Pending").length;
 
@@ -94,6 +111,7 @@ function HodDashboard() {
       </header>
 
       <main className="max-w-6xl mx-auto px-6 pt-10 space-y-6">
+        {requestError && <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{requestError}</p>}
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div>

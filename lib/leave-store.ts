@@ -1,7 +1,10 @@
-export type LeaveStatus = "Pending" | "Approved" | "Rejected";
+import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import { UserRole } from "@/lib/auth-store";
 
+export type LeaveStatus = "Pending" | "Approved" | "Rejected";
 export type LeaveRequest = {
   id: string;
+  facultyId: string;
   faculty: string;
   category: string;
   startDate: string;
@@ -12,45 +15,81 @@ export type LeaveRequest = {
   submittedAt: string;
 };
 
-const STORAGE_KEY = "faculty-portal-leave-requests-v1";
-const CHANGE_EVENT = "faculty-leave-requests-changed";
+const categoryNames: Record<string, string> = {
+  cl: "Casual Leave",
+  ml: "Medical Leave",
+  od: "On Duty",
+  el: "Earned Leave",
+};
 
-export function readRequests(): LeaveRequest[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const value: unknown = JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? "[]");
-    return Array.isArray(value) ? (value as LeaveRequest[]) : [];
-  } catch {
-    return [];
+export async function readRequests(role: UserRole, facultyId: string): Promise<LeaveRequest[]> {
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase
+    .from("leave_requests")
+    .select("id, faculty_id, leave_type, start_date, end_date, substitute, reason, status, submitted_at")
+    .order("submitted_at", { ascending: false });
+  if (error) throw new Error(error.message);
+
+  const rows = data ?? [];
+  const facultyIds = [...new Set(rows.map((row) => row.faculty_id))];
+  const names = new Map<string, string>();
+  if (role !== "faculty" && facultyIds.length) {
+    const profiles = await supabase.from("profiles").select("id, full_name").in("id", facultyIds);
+    if (profiles.error) throw new Error(profiles.error.message);
+    for (const profile of profiles.data ?? []) names.set(profile.id, profile.full_name);
   }
+
+  return rows.map((row) => ({
+    id: row.id,
+    facultyId: row.faculty_id,
+    faculty: row.faculty_id === facultyId ? "You" : names.get(row.faculty_id) ?? "Faculty member",
+    category: categoryNames[row.leave_type] ?? row.leave_type,
+    startDate: row.start_date,
+    endDate: row.end_date,
+    substitute: row.substitute ?? "",
+    reason: row.reason,
+    status: row.status.charAt(0).toUpperCase() + row.status.slice(1) as LeaveStatus,
+    submittedAt: row.submitted_at,
+  }));
 }
 
-export function getRequestsSnapshot() {
-  if (typeof window === "undefined") return "[]";
-  return window.localStorage.getItem(STORAGE_KEY) ?? "[]";
+export async function saveRequest(request: {
+  facultyId: string;
+  category: string;
+  startDate: string;
+  endDate: string;
+  substitute: string;
+  reason: string;
+}) {
+  const leaveTypes: Record<string, string> = { "Casual Leave": "cl", "Medical Leave": "ml", "On Duty": "od", "Earned Leave": "el" };
+  const { error } = await getSupabaseBrowserClient().from("leave_requests").insert({
+    faculty_id: request.facultyId,
+    leave_type: leaveTypes[request.category] ?? request.category,
+    start_date: request.startDate,
+    end_date: request.endDate,
+    substitute: request.substitute || null,
+    reason: request.reason,
+  });
+  if (error) throw new Error(error.message);
 }
 
-export function createRequestId() {
-  return `REQ-${Date.now().toString().slice(-6)}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+export async function updateRequestStatus(id: string, status: LeaveStatus, reviewerId: string) {
+  const { error } = await getSupabaseBrowserClient()
+    .from("leave_requests")
+    .update({
+      status: status.toLowerCase(),
+      reviewed_by: reviewerId,
+      reviewed_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+  if (error) throw new Error(error.message);
 }
 
-export function saveRequest(request: LeaveRequest) {
-  const requests = readRequests();
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify([request, ...requests]));
-  window.dispatchEvent(new Event(CHANGE_EVENT));
-}
-
-export function updateRequestStatus(id: string, status: LeaveStatus) {
-  const requests = readRequests().map((request) => request.id === id ? { ...request, status } : request);
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(requests));
-  window.dispatchEvent(new Event(CHANGE_EVENT));
-}
-
-export function subscribeToRequests(callback: () => void) {
-  window.addEventListener(CHANGE_EVENT, callback);
-  window.addEventListener("storage", callback);
-  return () => {
-    window.removeEventListener(CHANGE_EVENT, callback);
-    window.removeEventListener("storage", callback);
-  };
+export function subscribeToLeaveRequests(onChange: () => void) {
+  const supabase = getSupabaseBrowserClient();
+  const channel = supabase
+    .channel("faculty-leave-requests")
+    .on("postgres_changes", { event: "*", schema: "public", table: "leave_requests" }, onChange)
+    .subscribe();
+  return () => { void supabase.removeChannel(channel); };
 }

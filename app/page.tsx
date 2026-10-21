@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
 
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -38,9 +38,9 @@ import {
   Search,
   ArrowUpRight,
 } from "lucide-react";
-import { createRequestId, getRequestsSnapshot, LeaveRequest, saveRequest, subscribeToRequests } from "@/lib/leave-store";
+import { LeaveRequest, readRequests, saveRequest, subscribeToLeaveRequests } from "@/lib/leave-store";
 import { downloadCsv } from "@/lib/download-csv";
-import { getSession } from "@/lib/auth-store";
+import { useAuth } from "@/components/auth-provider";
 import { ProtectedContent, SignOutButton } from "@/components/protected-content";
 
 // 1. Define the validation rules using Zod
@@ -57,10 +57,26 @@ const leaveFormSchema = z.object({
 });
 
 function AppleFacultyDashboard() {
-  const snapshot = useSyncExternalStore(subscribeToRequests, getRequestsSnapshot, () => "[]");
-  const requests = JSON.parse(snapshot) as LeaveRequest[];
+  const { session } = useAuth();
+  const [requests, setRequests] = useState<LeaveRequest[]>([]);
   const [search, setSearch] = useState("");
   const [notice, setNotice] = useState("");
+  const [requestError, setRequestError] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    if (session) {
+      const load = () => {
+        void readRequests(session.role, session.id)
+          .then((items) => { if (active) setRequests(items); })
+          .catch((error: unknown) => { if (active) setRequestError(error instanceof Error ? error.message : "Unable to load requests."); });
+      };
+      load();
+      const unsubscribe = subscribeToLeaveRequests(load);
+      return () => { active = false; unsubscribe(); };
+    }
+    return () => { active = false; };
+  }, [session]);
 
   function downloadSummary() {
     downloadCsv("faculty-leave-summary.csv", ["Request ID", "Category", "Start date", "End date", "Substitute", "Reason", "Status", "Submitted"], requests.map((request) => [request.id, request.category, request.startDate, request.endDate, request.substitute, request.reason, request.status, request.submittedAt]));
@@ -79,25 +95,29 @@ function AppleFacultyDashboard() {
   });
 
   // 3. Define what happens on a successful submit
-  function onSubmit(values: z.infer<typeof leaveFormSchema>) {
+  async function onSubmit(values: z.infer<typeof leaveFormSchema>) {
     if (values.endDate < values.startDate) {
       form.setError("endDate", { message: "End date must be on or after the start date." });
       return;
     }
     const categoryNames: Record<string, string> = { cl: "Casual Leave", ml: "Medical Leave", od: "On Duty", el: "Earned Leave" };
-    saveRequest({
-      id: createRequestId(),
-      faculty: getSession()?.name ?? "Faculty Member",
-      category: categoryNames[values.category] ?? values.category,
-      startDate: values.startDate,
-      endDate: values.endDate,
-      substitute: values.substitute?.trim() || "",
-      reason: values.reason.trim(),
-      status: "Pending",
-      submittedAt: new Date().toISOString(),
-    });
-    setNotice("Your leave request was submitted for HOD review.");
-    form.reset();
+    if (!session) return;
+    try {
+      await saveRequest({
+        facultyId: session.id,
+        category: categoryNames[values.category] ?? values.category,
+        startDate: values.startDate,
+        endDate: values.endDate,
+        substitute: values.substitute?.trim() || "",
+        reason: values.reason.trim(),
+      });
+      setRequests(await readRequests(session.role, session.id));
+      setNotice("Your leave request was submitted for HOD review.");
+      setRequestError("");
+      form.reset();
+    } catch (error) {
+      setRequestError(error instanceof Error ? error.message : "Unable to submit your request.");
+    }
   }
 
   const quotas = [
@@ -187,6 +207,7 @@ function AppleFacultyDashboard() {
 
       <main className="max-w-6xl mx-auto px-6 pt-10 space-y-8">
         {notice && <div role="status" className="flex items-center justify-between rounded-xl border border-[#34c759]/20 bg-[#34c759]/10 px-4 py-3 text-sm text-[#1d8a42]">{notice}<button onClick={() => setNotice("")} aria-label="Dismiss message" className="font-semibold">×</button></div>}
+        {requestError && <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{requestError}</p>}
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div>
             <p className="text-xs font-medium uppercase tracking-wider text-[#86868b]">
