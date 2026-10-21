@@ -139,18 +139,6 @@ function AdminOverview() {
         </div>
       </section>
 
-      <section className="grid gap-4 lg:grid-cols-2">
-        <article className="rounded-3xl border border-black/[0.06] bg-white p-6 shadow-sm shadow-black/[0.02]">
-          <div className="flex items-start gap-3"><div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-700"><ShieldCheck className="h-4 w-4" /></div><div><h2 className="font-semibold">How roles are assigned</h2><p className="mt-1 text-sm leading-6 text-[#6e6e73]">New sign-ups start as faculty. Admins assign HOD or administrator access after verifying the person’s institutional responsibility.</p></div></div>
-          <div className="mt-5 space-y-3 rounded-2xl bg-[#f7f7f8] p-4 text-sm leading-6 text-[#55555a]"><p><span className="font-medium text-[#1d1d1f]">Faculty</span> — submit leave requests and follow their status.</p><p><span className="font-medium text-[#1d1d1f]">Head of Department</span> — review requests for their department.</p><p><span className="font-medium text-[#1d1d1f]">Administrator</span> — manage portal access and review all requests.</p></div>
-          <p className="mt-4 text-xs leading-5 text-[#86868b]">Role changes are performed through a Supabase function that verifies the signed-in administrator. HODs must have a department; they only see and review that department’s leave requests.</p>
-        </article>
-        <article className="rounded-3xl border border-blue-100 bg-blue-50/70 p-6">
-          <p className="text-xs font-semibold uppercase tracking-wider text-blue-700">Access controls</p><h2 className="mt-2 text-lg font-semibold">Assign roles with department scope</h2><p className="mt-2 text-sm leading-6 text-[#55555a]">Choose only from the institution’s department list. When you assign HOD, that HOD’s approval queue is limited to faculty assigned to the same department.</p>
-          <div className="mt-4 rounded-2xl border border-blue-100 bg-white/80 p-4"><p className="text-sm font-medium">Database migrations required</p><p className="mt-1 text-xs leading-5 text-[#6e6e73]">Run migrations <code>202610210001</code> and <code>202610210002</code> from the project’s <code>supabase/migrations</code> folder in Supabase SQL Editor before saving role changes.</p></div>
-          <p className="mt-4 text-xs text-[#6e6e73]">To protect the last administrator account, the database blocks self-demotion and removal of the final admin.</p>
-        </article>
-      </section>
     </div>
   </main>;
 }
