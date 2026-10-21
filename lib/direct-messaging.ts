@@ -1,4 +1,5 @@
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import { readableMessageBody } from "@/lib/content-format";
 
 export type DirectoryMember = { id: string; name: string; role: string; department: string | null };
 export type DirectMessage = { id: string; senderId: string; recipientId: string; body: string; createdAt: string; readAt: string | null };
@@ -15,7 +16,7 @@ export async function readDirectMessages(userId: string, peerId: string): Promis
     .or(`and(sender_id.eq.${userId},recipient_id.eq.${peerId}),and(sender_id.eq.${peerId},recipient_id.eq.${userId})`)
     .order("created_at", { ascending: true });
   if (error) throw new Error(error.message);
-  return (data ?? []).map((row) => ({ id: row.id, senderId: row.sender_id, recipientId: row.recipient_id, body: row.body, createdAt: row.created_at, readAt: row.read_at }));
+  return (data ?? []).map((row) => ({ id: row.id, senderId: row.sender_id, recipientId: row.recipient_id, body: readableMessageBody(row.body), createdAt: row.created_at, readAt: row.read_at }));
 }
 
 export async function sendDirectMessage(senderId: string, recipientId: string, body: string) {

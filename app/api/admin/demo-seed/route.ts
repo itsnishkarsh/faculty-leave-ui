@@ -56,7 +56,7 @@ function json(message: string, status: number) {
 }
 
 export async function POST(request: Request) {
-  if (process.env.DEMO_SEEDING_ENABLED !== "true") return json("Demo account creation is disabled on this deployment.", 404);
+  if (process.env.DEMO_SEEDING_ENABLED !== "true") return json("Account setup is unavailable on this deployment.", 404);
 
   const origin = request.headers.get("origin");
   if (origin && origin !== new URL(request.url).origin) return json("Request origin is not allowed.", 403);
@@ -66,12 +66,12 @@ export async function POST(request: Request) {
   const secretKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
   const password = process.env.DEMO_ACCOUNT_PASSWORD;
   if (!url || !publishableKey || !secretKey || password !== "12345678") {
-    return json("Demo seeding is not fully configured. Ask the project owner to check the server environment variables.", 503);
+    return json("Account setup is incomplete. Check the server environment variables.", 503);
   }
 
   const authorization = request.headers.get("authorization") ?? "";
   const accessToken = authorization.startsWith("Bearer ") ? authorization.slice(7) : "";
-  if (!accessToken) return json("Sign in as an administrator to create demo data.", 401);
+  if (!accessToken) return json("Sign in as an administrator to continue.", 401);
 
   const verifier = createClient(url, publishableKey, { auth: { persistSession: false, autoRefreshToken: false } });
   const { data: authData, error: authError } = await verifier.auth.getUser(accessToken);
@@ -79,7 +79,7 @@ export async function POST(request: Request) {
 
   const service = createClient(url, secretKey, { auth: { persistSession: false, autoRefreshToken: false } });
   const { data: actorProfile, error: actorError } = await service.from("profiles").select("role").eq("id", authData.user.id).maybeSingle();
-  if (actorError || actorProfile?.role !== "admin") return json("Only a signed-in portal administrator can create demo data.", 403);
+  if (actorError || actorProfile?.role !== "admin") return json("Only a signed-in portal administrator can perform this action.", 403);
   const { data: admins, error: adminsError } = await service.from("profiles").select("id").eq("role", "admin");
   if (adminsError || admins?.length !== 1 || admins[0]?.id !== authData.user.id) {
     return json("Demo setup requires this signed-in account to be the portal's only administrator.", 409);
@@ -87,7 +87,7 @@ export async function POST(request: Request) {
 
   const emailList = demoPeople.map((person) => person.email);
   const { data: existingProfiles, error: profilesError } = await service.from("profiles").select("id, email").in("email", emailList);
-  if (profilesError) return json("Unable to look up existing demo accounts. Confirm the database migrations have been run.", 500);
+  if (profilesError) return json("Unable to look up the configured accounts. Confirm the database migrations have been run.", 500);
 
   const profileByEmail = new Map((existingProfiles ?? []).map((profile) => [profile.email.toLowerCase(), profile.id]));
   const accountIds = new Map<string, string>();
@@ -98,7 +98,7 @@ export async function POST(request: Request) {
     if (!existingId) continue;
     const { data, error } = await service.auth.admin.getUserById(existingId);
     if (error || data.user?.user_metadata?.is_demo_user !== true) {
-      return json("A reserved demo email is already in use by a non-demo account. Contact the project owner.", 409);
+      return json("A reserved account email is already in use. Contact the project owner.", 409);
     }
     accountIds.set(person.email, existingId);
   }
@@ -114,7 +114,7 @@ export async function POST(request: Request) {
       });
       if (error || !data.user) {
         console.error("Demo auth user creation failed", error?.message);
-        return json("Could not create the demo accounts. Check Supabase Auth and database logs.", 500);
+        return json("Could not create the accounts. Check Supabase Auth and database logs.", 500);
       }
       id = data.user.id;
       accountIds.set(person.email, id);
@@ -122,7 +122,7 @@ export async function POST(request: Request) {
       const { error } = await service.auth.admin.updateUserById(id, { password, email_confirm: true, user_metadata: { full_name: person.name, is_demo_user: true } });
       if (error) {
         console.error("Demo auth user refresh failed", error.message);
-        return json("Could not prepare the demo sign-in accounts. Check Supabase Auth logs.", 500);
+        return json("Could not prepare the sign-in accounts. Check Supabase Auth logs.", 500);
       }
     }
 
@@ -135,7 +135,7 @@ export async function POST(request: Request) {
     }, { onConflict: "id" });
     if (profileUpsertError) {
       console.error("Demo profile setup failed", profileUpsertError.message);
-      return json("Demo accounts were created, but profile setup failed. Check the database migrations and try again.", 500);
+      return json("Accounts were created, but profile setup failed. Check the database migrations and try again.", 500);
     }
   }
 
@@ -149,9 +149,9 @@ export async function POST(request: Request) {
   const sampleRows = faculty.flatMap((person, index) => {
     const facultyId = accountIds.get(person.email)!;
     const definitions = [
-      { key: "pending", leave_type: "cl", start_date: futureDate(7 + index), end_date: futureDate(7 + index), status: "pending", reason: `DEMO DATA: seed-v2 ${person.email} pending request. Family commitment; please review the coverage plan.` },
-      { key: "approved", leave_type: "od", start_date: futureDate(18 + index), end_date: futureDate(19 + index), status: "approved", reason: `DEMO DATA: seed-v2 ${person.email} approved request. Attending an academic workshop.` },
-      { key: "rejected", leave_type: "el", start_date: futureDate(-20 - index), end_date: futureDate(-19 - index), status: "rejected", reason: `DEMO DATA: seed-v2 ${person.email} rejected request. Sample historical record for dashboard review.` },
+      { key: "pending", leave_type: "cl", start_date: futureDate(7 + index), end_date: futureDate(7 + index), status: "pending", reason: "I need to attend to a family commitment. Please review the coverage plan for these dates." },
+      { key: "approved", leave_type: "od", start_date: futureDate(18 + index), end_date: futureDate(19 + index), status: "approved", reason: "I will be representing the department at an academic workshop." },
+      { key: "rejected", leave_type: "el", start_date: futureDate(-20 - index), end_date: futureDate(-19 - index), status: "rejected", reason: "I requested leave for a personal commitment, but coverage could not be arranged on these dates." },
     ];
     return definitions.map((definition) => ({
       faculty_id: facultyId,
@@ -166,14 +166,14 @@ export async function POST(request: Request) {
     }));
   });
 
-  const markerList = sampleRows.map((row) => row.reason);
-  const { data: existingRequests, error: requestReadError } = await service.from("leave_requests").select("reason").in("faculty_id", faculty.map((person) => accountIds.get(person.email)!)).in("reason", markerList);
+  const seededFacultyIds = faculty.map((person) => accountIds.get(person.email)!);
+  const { data: existingRequests, error: requestReadError } = await service.from("leave_requests").select("faculty_id, leave_type").in("faculty_id", seededFacultyIds);
   if (requestReadError) {
     console.error("Demo request lookup failed", requestReadError.message);
     return json("Unable to check existing sample requests. Confirm the database migrations have been run.", 500);
   }
-  const existingMarkers = new Set((existingRequests ?? []).map((row) => row.reason));
-  const rowsToInsert = sampleRows.filter((row) => !existingMarkers.has(row.reason));
+  const existingMarkers = new Set((existingRequests ?? []).map((row) => `${row.faculty_id}|${row.leave_type}`));
+  const rowsToInsert = sampleRows.filter((row) => !existingMarkers.has(`${row.faculty_id}|${row.leave_type}`));
   let insertedRequests: Array<{ id: string; faculty_id: string; reason: string }> = [];
   if (rowsToInsert.length) {
     const { data, error } = await service.from("leave_requests").insert(rowsToInsert).select("id, faculty_id, reason");
@@ -184,13 +184,13 @@ export async function POST(request: Request) {
     insertedRequests = data ?? [];
   }
 
-  // Include a few labeled example messages so the conversation interface has data to explore.
-  const pendingRequests = insertedRequests.filter((row) => row.reason.includes("pending request"));
+  // Include a few sample conversations so the leave discussion interface has data to explore.
+  const pendingRequests = insertedRequests.filter((row) => row.reason.startsWith("I need to attend"));
   if (pendingRequests.length) {
     const facultyHod = new Map(faculty.map((person) => [accountIds.get(person.email)!, hodByDepartment.get(person.department)!]));
     const messages = pendingRequests.flatMap((row) => [
-      { leave_request_id: row.id, sender_id: row.faculty_id, body: "DEMO DATA: Could you confirm the substitute coverage for these dates?" },
-      { leave_request_id: row.id, sender_id: facultyHod.get(row.faculty_id)!, body: "DEMO DATA: Thanks. Please add the final coverage details before approval." },
+      { leave_request_id: row.id, sender_id: row.faculty_id, body: "Could you confirm the substitute coverage for these dates?" },
+      { leave_request_id: row.id, sender_id: facultyHod.get(row.faculty_id)!, body: "Thanks. Please add the final coverage details so we can complete the review." },
     ]);
     const { error } = await service.from("leave_messages").insert(messages);
     if (error) console.error("Demo conversation sample could not be added", error.message);

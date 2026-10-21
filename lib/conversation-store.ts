@@ -1,4 +1,5 @@
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import { readableMessageBody } from "@/lib/content-format";
 
 export type LeaveMessage = {
   id: string;
@@ -27,7 +28,7 @@ export async function readLeaveMessages(leaveRequestId: string): Promise<LeaveMe
     .eq("leave_request_id", leaveRequestId)
     .order("created_at", { ascending: true });
   if (error) throw new Error(error.message);
-  return (data ?? []).map((row) => ({ id: row.id, leaveRequestId: row.leave_request_id, senderId: row.sender_id, body: row.body, createdAt: row.created_at }));
+  return (data ?? []).map((row) => ({ id: row.id, leaveRequestId: row.leave_request_id, senderId: row.sender_id, body: readableMessageBody(row.body), createdAt: row.created_at }));
 }
 
 export async function sendLeaveMessage(leaveRequestId: string, senderId: string, body: string) {

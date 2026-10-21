@@ -1,5 +1,6 @@
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { UserRole } from "@/lib/auth-store";
+import { readableLeaveReason } from "@/lib/content-format";
 
 export type LeaveStatus = "Pending" | "Approved" | "Rejected";
 export type LeaveRequest = {
@@ -47,7 +48,7 @@ export async function readRequests(role: UserRole, facultyId: string): Promise<L
     startDate: row.start_date,
     endDate: row.end_date,
     substitute: row.substitute ?? "",
-    reason: row.reason,
+    reason: readableLeaveReason(row.reason),
     status: row.status.charAt(0).toUpperCase() + row.status.slice(1) as LeaveStatus,
     submittedAt: row.submitted_at,
   }));
