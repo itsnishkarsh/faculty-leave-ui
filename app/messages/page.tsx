@@ -41,7 +41,7 @@ function MessagesPage() {
   useEffect(() => {
     if (!session) return;
     let active = true;
-    void readDirectory().then((items) => { if (active) { setMembers(items); setSelectedId((current) => current || items[0]?.id || ""); } })
+    void readDirectory().then((items) => { if (active) { setMembers(items); const requestedMember = new URLSearchParams(window.location.search).get("member"); setSelectedId(items.some((item) => item.id === requestedMember) ? requestedMember! : items[0]?.id || ""); } })
       .catch((cause) => { if (active) setError(cause instanceof Error ? cause.message : "Unable to load members."); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };

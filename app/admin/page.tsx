@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowRight, Check, ClipboardList, Copy, Database, Search, ShieldCheck, Users } from "lucide-react";
+import { ArrowRight, Check, ClipboardList, Copy, Database, MessageCircle, Phone, Search, ShieldCheck, Users } from "lucide-react";
 import { listPortalUsers, PortalProfile, setPortalAccess, UserRole } from "@/lib/auth-store";
 import { DEPARTMENTS, isDepartment } from "@/lib/departments";
 import { LeaveRequest, readRequests, subscribeToLeaveRequests } from "@/lib/leave-store";
@@ -123,15 +123,16 @@ function AdminOverview() {
             <label><span className="sr-only">Filter accounts by role</span><select value={roleFilter} onChange={(event) => setRoleFilter(event.target.value as "all" | UserRole)} className="h-10 w-full rounded-xl border border-black/10 bg-white px-3 text-sm outline-none focus:border-blue-500 sm:w-48"><option value="all">All roles</option><option value="faculty">Faculty</option><option value="hod">Head of Department</option><option value="admin">Administrator</option></select></label>
           </div>
         </div>
-        <div className="hidden grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1.5fr)] gap-4 bg-[#fafafa] px-6 py-3 text-xs font-medium uppercase tracking-wider text-[#86868b] sm:grid"><span>Name</span><span>Department</span><span>Access level</span></div>
+        <div className="hidden grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1.5fr)_auto] gap-4 bg-[#fafafa] px-6 py-3 text-xs font-medium uppercase tracking-wider text-[#86868b] sm:grid"><span>Name</span><span>Department</span><span>Access level</span><span>Quick chat</span></div>
         <div className="divide-y divide-black/[0.06]">
           {visibleUsers.map((user) => {
             const draft = drafts[user.id] ?? { role: user.role, department: user.department ?? "" };
             const changed = draft.role !== user.role || draft.department !== (user.department ?? "");
-            return <div key={user.id} className="grid gap-3 px-5 py-4 sm:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1.5fr)] sm:items-center sm:gap-4 sm:px-6">
+            return <div key={user.id} className="grid gap-3 px-5 py-4 sm:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1.5fr)_auto] sm:items-center sm:gap-4 sm:px-6">
             <div className="min-w-0"><p className="truncate text-sm font-medium">{user.name || "Unnamed account"}</p><p className="truncate text-xs text-[#86868b]">{user.email}</p></div>
             <label className="space-y-1"><span className="text-[10px] font-medium uppercase tracking-wide text-[#86868b] sm:hidden">Department</span><select aria-label={`Department for ${user.name}`} value={draft.department} onChange={(event) => setDrafts((current) => ({ ...current, [user.id]: { ...draft, department: event.target.value } }))} className="h-9 w-full rounded-lg border border-black/10 bg-white px-2.5 text-xs outline-none focus:border-blue-500">{user.department && !isDepartment(user.department) ? <option value={user.department}>Replace invalid value: {user.department}</option> : <option value="">Choose department</option>}{DEPARTMENTS.map((department) => <option key={department} value={department}>{department}</option>)}</select></label>
             <div className="flex flex-wrap items-center gap-2"><label className="sr-only" htmlFor={`role-${user.id}`}>Access level for {user.name}</label><select id={`role-${user.id}`} value={draft.role} onChange={(event) => setDrafts((current) => ({ ...current, [user.id]: { ...draft, role: event.target.value as UserRole } }))} className={`h-9 rounded-full px-3 text-xs font-medium outline-none focus:ring-2 focus:ring-blue-500/30 ${roleStyles[draft.role]}`}><option value="faculty">Faculty</option><option value="hod">Head of Department</option><option value="admin">Administrator</option></select>{changed && <button onClick={() => void saveAccess(user)} disabled={savingId === user.id} className="h-9 rounded-lg bg-[#1d1d1f] px-3 text-xs font-medium text-white hover:bg-black/80 disabled:opacity-50">{savingId === user.id ? "Saving…" : "Save access"}</button>}</div>
+            <div className="flex flex-wrap gap-2">{user.id !== session?.id && <><Link href={`/messages?member=${encodeURIComponent(user.id)}`} aria-label={`Message ${user.name}`} className="inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-3 text-xs font-medium text-blue-700 transition hover:border-blue-300 hover:bg-blue-100"><MessageCircle className="h-4 w-4" /><span>Message</span></Link><button type="button" onClick={() => window.dispatchEvent(new CustomEvent("portal-start-call", { detail: { id: user.id, name: user.name } }))} aria-label={`Call ${user.name}`} className="inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-green-200 bg-green-50 px-3 text-xs font-medium text-green-700 transition hover:border-green-300 hover:bg-green-100"><Phone className="h-4 w-4" /><span>Call</span></button></>}</div>
           </div>})}
           {!loading && visibleUsers.length === 0 && <p className="px-6 py-10 text-center text-sm text-[#86868b]">{users.length ? "No accounts match those filters." : "Accounts will appear here after users sign up."}</p>}
           {loading && <p className="px-6 py-10 text-center text-sm text-[#86868b]">Loading portal accounts…</p>}
