@@ -196,6 +196,17 @@ export function GlobalCommunications() {
         if (messageToastTimer) window.clearTimeout(messageToastTimer);
         messageToastTimer = window.setTimeout(() => setNotice(""), 6500);
       }).subscribe();
+    const announcementChannel = supabase.channel(`incoming-announcements-${session.id}`)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "portal_announcements" }, (event) => {
+        const row = event.new as { sender_id: string; body: string; scope: string; department: string | null };
+        if (row.sender_id === session.id) return;
+        const sender = membersRef.current.get(row.sender_id) ?? "Portal administrator";
+        const audience = row.scope === "all" ? "everyone" : row.department ?? "your department";
+        setNotice(`Announcement for ${audience} from ${sender}: ${row.body.slice(0, 100)}${row.body.length > 100 ? "…" : ""}`);
+        ping();
+        if (messageToastTimer) window.clearTimeout(messageToastTimer);
+        messageToastTimer = window.setTimeout(() => setNotice(""), 8000);
+      }).subscribe();
     const callChannel = supabase.channel(`incoming-calls-${session.id}`)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "voice_calls", filter: `callee_id=eq.${session.id}` }, (event) => {
         const row = event.new as { id: string; caller_id: string; status: string };
@@ -215,7 +226,7 @@ export function GlobalCommunications() {
       .then(({ data }) => { if (data && active && !callRef.current) { const info: CallInfo = { id: data.id, peerId: data.caller_id, peerName: membersRef.current.get(data.caller_id) ?? "Portal member", direction: "incoming" }; callRef.current = info; setCall(info); ping(); } });
     const beginCall = (event: Event) => { const detail = (event as CustomEvent<{ id: string; name: string }>).detail; if (detail) void startCall(detail.id, detail.name); };
     window.addEventListener("portal-start-call", beginCall);
-    return () => { active = false; window.removeEventListener("portal-start-call", beginCall); if (messageToastTimer) window.clearTimeout(messageToastTimer); void supabase.removeChannel(messageChannel); void supabase.removeChannel(callChannel); cleanupCall(); };
+    return () => { active = false; window.removeEventListener("portal-start-call", beginCall); if (messageToastTimer) window.clearTimeout(messageToastTimer); void supabase.removeChannel(messageChannel); void supabase.removeChannel(announcementChannel); void supabase.removeChannel(callChannel); cleanupCall(); };
   }, [cleanupCall, ping, session, startCall]);
 
   function toggleSound() {
