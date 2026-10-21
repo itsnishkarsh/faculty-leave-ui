@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Command } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { roleHome, signIn } from "@/lib/auth-store";
 import { useAuth } from "@/components/auth-provider";
 
@@ -39,8 +40,8 @@ export default function LoginPage() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-[#f5f5f7] p-4 text-[#1d1d1f]">
       <div className="mb-7 flex flex-col items-center text-center">
-        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-[#1d1d1f] text-white shadow-lg"><Command className="h-6 w-6" /></div>
-        <h1 className="text-2xl font-semibold tracking-tight">Faculty Portal</h1>
+        <Image src="/eduleave-logo.jpeg" alt="EduLeave Portal logo" width={1408} height={1024} priority className="mb-3 h-28 w-40 object-contain" />
+        <h1 className="text-2xl font-semibold tracking-tight">EduLeave Portal</h1>
         <p className="mt-1 text-sm text-[#86868b]">Sign in to continue to your dashboard</p>
       </div>
       <div className="w-full max-w-[390px] rounded-[24px] border border-black/[0.04] bg-white p-8 shadow-[0_4px_24px_rgba(0,0,0,0.04)]">

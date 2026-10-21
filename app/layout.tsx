@@ -1,6 +1,12 @@
 import "./globals.css";
 import { AuthProvider } from "@/components/auth-provider";
 import { GlobalCommunications } from "@/components/global-communications";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "EduLeave Portal",
+  description: "Academic leave and vacation management portal.",
+};
 
 export default function RootLayout({
   children,

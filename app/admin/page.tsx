@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowRight, Check, ClipboardList, Copy, Database, Search, ShieldCheck, Users } from "lucide-react";
 import { listPortalUsers, PortalProfile, setPortalAccess, UserRole } from "@/lib/auth-store";
@@ -94,7 +95,7 @@ function AdminOverview() {
   return <main className="min-h-screen bg-[#f5f5f7] px-4 py-7 text-[#1d1d1f] sm:px-8 sm:py-10">
     <div className="mx-auto max-w-6xl space-y-7">
       <header className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3"><div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#1d1d1f] text-white"><ShieldCheck className="h-5 w-5" /></div><div><p className="text-xs font-medium uppercase tracking-[0.16em] text-[#86868b]">Faculty Portal</p><h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Admin console</h1></div></div>
+        <div className="flex items-center gap-3"><Image src="/icon.png" alt="EduLeave Portal" width={44} height={44} className="h-11 w-11 rounded-xl" /><div><p className="text-xs font-medium uppercase tracking-[0.16em] text-[#86868b]">EduLeave Portal</p><h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Admin console</h1></div></div>
         <SignOutButton />
       </header>
 

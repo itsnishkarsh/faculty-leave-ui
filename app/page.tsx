@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -141,7 +142,7 @@ function AppleFacultyDashboard() {
       <header className="sticky top-0 z-50 border-b border-black/[0.06] bg-white/80 backdrop-blur-xl">
         <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-6">
-            <span className="font-semibold text-sm tracking-tight text-[#1d1d1f]">Faculty Portal</span>
+            <span className="inline-flex items-center gap-2 font-semibold text-sm tracking-tight text-[#1d1d1f]"><Image src="/icon.png" alt="" width={30} height={30} className="h-7 w-7 rounded-lg" />EduLeave Portal</span>
             <div className="h-4 w-px bg-black/[0.08]" />
             <nav className="flex items-center gap-5 text-xs text-[#86868b] font-normal">
               <a href="#overview" className="text-[#1d1d1f] font-medium transition-colors">

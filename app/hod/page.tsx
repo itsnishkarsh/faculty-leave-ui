@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CalendarDays, CheckCircle2, Clock3, Download, MessageCircle, Users } from "lucide-react";
 import { LeaveRequest, readRequests, subscribeToLeaveRequests } from "@/lib/leave-store";
@@ -56,7 +57,7 @@ function HodDashboard() {
   const maxTrend = Math.max(1, ...trend.map((item) => item.count));
 
   return <main className="min-h-screen bg-[#f5f5f7] px-4 py-7 text-[#1d1d1f] sm:px-8 sm:py-10"><div className="mx-auto max-w-6xl space-y-7">
-    <header className="flex items-center justify-between gap-4"><div><p className="text-xs font-medium uppercase tracking-[0.16em] text-[#86868b]">Department workspace</p><h1 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">HOD dashboard</h1></div><div className="flex items-center gap-4"><Link href="/approvals" className="rounded-full bg-[#0071e3] px-4 py-2 text-sm font-medium text-white hover:bg-[#0077ed]">Approval queue <span className="ml-1 rounded-full bg-white/20 px-2 py-0.5">{pending.length}</span></Link><SignOutButton /></div></header>
+    <header className="flex items-center justify-between gap-4"><div className="flex items-center gap-3"><Image src="/icon.png" alt="EduLeave Portal" width={44} height={44} className="h-11 w-11 rounded-xl" /><div><p className="text-xs font-medium uppercase tracking-[0.16em] text-[#86868b]">EduLeave Portal · Department workspace</p><h1 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">HOD dashboard</h1></div></div><div className="flex items-center gap-4"><Link href="/approvals" className="rounded-full bg-[#0071e3] px-4 py-2 text-sm font-medium text-white hover:bg-[#0077ed]">Approval queue <span className="ml-1 rounded-full bg-white/20 px-2 py-0.5">{pending.length}</span></Link><SignOutButton /></div></header>
     <section className="rounded-3xl bg-[#1d1d1f] p-6 text-white sm:p-8"><p className="text-sm text-white/60">{session?.department || "Department not assigned"}</p><h2 className="mt-2 text-2xl font-semibold sm:text-3xl">Department overview</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-white/65">A live view of leave activity for your assigned department. Faculty and requests in other departments are hidden by database access policies.</p></section>
     {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
     <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

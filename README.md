@@ -1,4 +1,4 @@
-# Faculty Leave Portal
+# TCET Faculty Portal
 
 A Next.js app for faculty leave requests, HOD approvals, and portal administration. Supabase provides authentication and shared database storage.
 
