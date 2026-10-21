@@ -6,7 +6,7 @@ export type DirectMessage = { id: string; senderId: string; recipientId: string;
 export async function readDirectory(): Promise<DirectoryMember[]> {
   const { data, error } = await getSupabaseBrowserClient().rpc("portal_directory");
   if (error) throw new Error(error.message);
-  return (data ?? []).map((row) => ({ id: row.id, name: row.full_name, role: row.role, department: row.department }));
+  return (data ?? []).map((row: { id: string; full_name: string; role: string; department: string | null }) => ({ id: row.id, name: row.full_name, role: row.role, department: row.department }));
 }
 
 export async function readDirectMessages(userId: string, peerId: string): Promise<DirectMessage[]> {

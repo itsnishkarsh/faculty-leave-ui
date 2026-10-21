@@ -184,7 +184,7 @@ export function GlobalCommunications() {
     let messageToastTimer: number | undefined;
     const loadDirectory = async () => {
       const { data } = await supabase.rpc("portal_directory");
-      if (active) membersRef.current = new Map((data ?? []).map((member) => [member.id, member.full_name]));
+      if (active) membersRef.current = new Map((data ?? []).map((member: { id: string; full_name: string }) => [member.id, member.full_name]));
     };
     void loadDirectory();
     const messageChannel = supabase.channel(`incoming-direct-messages-${session.id}`)
