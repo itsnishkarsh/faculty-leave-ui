@@ -2,8 +2,8 @@ import { User } from "@supabase/supabase-js";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export type UserRole = "faculty" | "hod" | "admin";
-export type PortalSession = { id: string; name: string; email: string; role: UserRole };
-export type PortalProfile = { id: string; name: string; email: string; role: UserRole };
+export type PortalSession = { id: string; name: string; email: string; role: UserRole; department: string | null };
+export type PortalProfile = { id: string; name: string; email: string; role: UserRole; department: string | null };
 
 function publishSession(session: PortalSession | null, error: string | null = null) {
   window.dispatchEvent(new CustomEvent("faculty-portal-session", { detail: { session, error } }));
@@ -16,7 +16,7 @@ export function roleHome(role: UserRole) {
 export async function getPortalSession(user: User) {
   const { data, error } = await getSupabaseBrowserClient()
     .from("profiles")
-    .select("id, email, full_name, role")
+    .select("id, email, full_name, role, department")
     .eq("id", user.id)
     .single();
 
@@ -24,7 +24,7 @@ export async function getPortalSession(user: User) {
   if (!["faculty", "hod", "admin"].includes(data.role)) return { session: null, error: "Your account has an unsupported portal role." };
 
   return {
-    session: { id: data.id, email: data.email, name: data.full_name, role: data.role as UserRole },
+    session: { id: data.id, email: data.email, name: data.full_name, role: data.role as UserRole, department: data.department ?? null },
     error: null,
   };
 }
@@ -59,7 +59,7 @@ export async function signOut() {
 export async function listPortalUsers(): Promise<PortalProfile[]> {
   const { data, error } = await getSupabaseBrowserClient()
     .from("profiles")
-    .select("id, full_name, email, role")
+    .select("id, full_name, email, role, department")
     .order("full_name");
   if (error) throw new Error(error.message);
   return (data ?? []).map((profile) => ({
@@ -67,5 +67,15 @@ export async function listPortalUsers(): Promise<PortalProfile[]> {
     name: profile.full_name,
     email: profile.email,
     role: profile.role as UserRole,
+    department: profile.department ?? null,
   }));
+}
+
+export async function setPortalAccess(userId: string, role: UserRole, department: string | null) {
+  const { error } = await getSupabaseBrowserClient().rpc("admin_set_profile_access", {
+    target_user_id: userId,
+    new_role: role,
+    new_department: department,
+  });
+  if (error) throw new Error(error.message);
 }
