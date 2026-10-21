@@ -1,5 +1,7 @@
 "use client";
 
+import { useState, useSyncExternalStore } from "react";
+
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -8,7 +10,6 @@ import {
   Sheet,
   SheetContent,
   SheetDescription,
-  SheetHeader,
   SheetTitle,
   SheetTrigger,
   SheetFooter,
@@ -33,15 +34,14 @@ import {
 } from "@/components/ui/select";
 import {
   Calendar,
-  Clock,
-  FileText,
   Plus,
-  ChevronRight,
   Search,
-  CheckCircle2,
-  AlertCircle,
   ArrowUpRight,
 } from "lucide-react";
+import { createRequestId, getRequestsSnapshot, LeaveRequest, saveRequest, subscribeToRequests } from "@/lib/leave-store";
+import { downloadCsv } from "@/lib/download-csv";
+import { getSession } from "@/lib/auth-store";
+import { ProtectedContent, SignOutButton } from "@/components/protected-content";
 
 // 1. Define the validation rules using Zod
 const leaveFormSchema = z.object({
@@ -56,7 +56,16 @@ const leaveFormSchema = z.object({
   }),
 });
 
-export default function AppleFacultyDashboard() {
+function AppleFacultyDashboard() {
+  const snapshot = useSyncExternalStore(subscribeToRequests, getRequestsSnapshot, () => "[]");
+  const requests = JSON.parse(snapshot) as LeaveRequest[];
+  const [search, setSearch] = useState("");
+  const [notice, setNotice] = useState("");
+
+  function downloadSummary() {
+    downloadCsv("faculty-leave-summary.csv", ["Request ID", "Category", "Start date", "End date", "Substitute", "Reason", "Status", "Submitted"], requests.map((request) => [request.id, request.category, request.startDate, request.endDate, request.substitute, request.reason, request.status, request.submittedAt]));
+  }
+
   // 2. Initialize the form with the Zod resolver
   const form = useForm<z.infer<typeof leaveFormSchema>>({
     resolver: zodResolver(leaveFormSchema),
@@ -71,10 +80,24 @@ export default function AppleFacultyDashboard() {
 
   // 3. Define what happens on a successful submit
   function onSubmit(values: z.infer<typeof leaveFormSchema>) {
-    console.log("Form successfully validated and submitted:", values);
-    // Here you would typically send the data to your backend API
-    alert("Leave request submitted successfully!");
-    form.reset(); // Clear the form after submission
+    if (values.endDate < values.startDate) {
+      form.setError("endDate", { message: "End date must be on or after the start date." });
+      return;
+    }
+    const categoryNames: Record<string, string> = { cl: "Casual Leave", ml: "Medical Leave", od: "On Duty", el: "Earned Leave" };
+    saveRequest({
+      id: createRequestId(),
+      faculty: getSession()?.name ?? "Faculty Member",
+      category: categoryNames[values.category] ?? values.category,
+      startDate: values.startDate,
+      endDate: values.endDate,
+      substitute: values.substitute?.trim() || "",
+      reason: values.reason.trim(),
+      status: "Pending",
+      submittedAt: new Date().toISOString(),
+    });
+    setNotice("Your leave request was submitted for HOD review.");
+    form.reset();
   }
 
   const quotas = [
@@ -116,29 +139,6 @@ export default function AppleFacultyDashboard() {
     },
   ];
 
-  const recentHistory = [
-    {
-      id: "REQ-2041",
-      title: "ICLR 2026 Academic Conference",
-      category: "On Duty (OD)",
-      dates: "Oct 14 – Oct 17, 2026",
-      days: "4 days",
-      substitute: "Prof. Ananya Sen (Dept. Assigned)",
-      status: "Approved",
-      statusClass: "text-[#1d8a42] bg-[#34c759]/10 border-[#34c759]/20",
-    },
-    {
-      id: "REQ-1988",
-      title: "Family Emergency / Personal",
-      category: "Casual Leave",
-      dates: "Nov 02, 2026",
-      days: "1 day",
-      substitute: "Lectures Rescheduled",
-      status: "Under Review",
-      statusClass: "text-[#b25e00] bg-[#ff9500]/10 border-[#ff9500]/20",
-    },
-  ];
-
   return (
     <div className="min-h-screen pb-20">
       <header className="sticky top-0 z-50 border-b border-black/[0.06] bg-white/80 backdrop-blur-xl">
@@ -155,10 +155,10 @@ export default function AppleFacultyDashboard() {
               >
                 Overview
               </a>
-              <a href="#" className="hover:text-[#1d1d1f] transition-colors">
+              <a href="#history" className="hover:text-[#1d1d1f] transition-colors">
                 Leave History
               </a>
-              <a href="#" className="hover:text-[#1d1d1f] transition-colors">
+              <a href="#resources" className="hover:text-[#1d1d1f] transition-colors">
                 Department Schedule
               </a>
               <a href="#" className="hover:text-[#1d1d1f] transition-colors">
@@ -172,17 +172,21 @@ export default function AppleFacultyDashboard() {
               <input
                 type="text"
                 placeholder="Search requests..."
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
                 className="w-48 pl-8 pr-3 py-1 text-xs rounded-full bg-black/[0.04] border border-transparent focus:border-black/[0.1] focus:bg-white focus:outline-none transition-all placeholder:text-[#86868b]"
               />
             </div>
             <div className="h-7 w-7 rounded-full bg-[#1d1d1f] text-white flex items-center justify-center text-xs font-medium">
               FK
             </div>
+            <SignOutButton />
           </div>
         </div>
       </header>
 
       <main className="max-w-6xl mx-auto px-6 pt-10 space-y-8">
+        {notice && <div role="status" className="flex items-center justify-between rounded-xl border border-[#34c759]/20 bg-[#34c759]/10 px-4 py-3 text-sm text-[#1d8a42]">{notice}<button onClick={() => setNotice("")} aria-label="Dismiss message" className="font-semibold">×</button></div>}
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div>
             <p className="text-xs font-medium uppercase tracking-wider text-[#86868b]">
@@ -194,7 +198,7 @@ export default function AppleFacultyDashboard() {
           </div>
 
           <div className="flex items-center gap-3">
-            <button className="px-3.5 py-1.5 text-xs font-medium text-[#1d1d1f] bg-white border border-black/[0.08] rounded-full shadow-[0_1px_2px_rgba(0,0,0,0.04)] hover:bg-black/[0.02] transition-colors">
+            <button onClick={downloadSummary} className="px-3.5 py-1.5 text-xs font-medium text-[#1d1d1f] bg-white border border-black/[0.08] rounded-full shadow-[0_1px_2px_rgba(0,0,0,0.04)] hover:bg-black/[0.02] transition-colors">
               Download Summary
             </button>
 
@@ -408,7 +412,7 @@ export default function AppleFacultyDashboard() {
 
         {/* Detail Panel */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 rounded-[20px] bg-white border border-black/[0.06] shadow-[0_2px_8px_rgba(0,0,0,0.02)] p-6">
+          <div id="history" className="lg:col-span-2 rounded-[20px] bg-white border border-black/[0.06] shadow-[0_2px_8px_rgba(0,0,0,0.02)] p-6">
             <div className="flex items-center justify-between mb-5">
               <div>
                 <h2 className="text-sm font-semibold text-[#1d1d1f]">
@@ -418,15 +422,10 @@ export default function AppleFacultyDashboard() {
                   Track approvals, substitute coverage, and dates
                 </p>
               </div>
-              <a
-                href="#"
-                className="text-xs text-[#0071e3] hover:underline flex items-center gap-0.5"
-              >
-                All records <ChevronRight className="h-3 w-3" />
-              </a>
+              <span className="text-xs text-[#86868b]">{requests.length} saved request{requests.length === 1 ? "" : "s"}</span>
             </div>
             <div className="divide-y divide-black/[0.05]">
-              {recentHistory.map((item) => (
+              {requests.filter((item) => `${item.id} ${item.reason} ${item.category} ${item.status}`.toLowerCase().includes(search.toLowerCase())).map((item) => (
                 <div
                   key={item.id}
                   className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 first:pt-0 last:pb-0"
@@ -434,7 +433,7 @@ export default function AppleFacultyDashboard() {
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-medium text-[#1d1d1f]">
-                        {item.title}
+                        {item.reason}
                       </span>
                       <span className="text-[10px] text-[#86868b] font-mono">
                         {item.id}
@@ -446,25 +445,26 @@ export default function AppleFacultyDashboard() {
                       </span>
                       <span>•</span>
                       <span>
-                        {item.dates} ({item.days})
+                        {new Date(`${item.startDate}T00:00:00`).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}{item.endDate !== item.startDate ? ` – ${new Date(`${item.endDate}T00:00:00`).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}` : ""}
                       </span>
                       <span>•</span>
-                      <span>{item.substitute}</span>
+                      <span>{item.substitute || "No substitute listed"}</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
                     <span
-                      className={`text-[11px] font-medium px-2.5 py-0.5 rounded-full border ${item.statusClass}`}
+                      className={`text-[11px] font-medium px-2.5 py-0.5 rounded-full border ${item.status === "Approved" ? "text-[#1d8a42] bg-[#34c759]/10 border-[#34c759]/20" : item.status === "Rejected" ? "text-[#b42318] bg-red-500/10 border-red-500/20" : "text-[#b25e00] bg-[#ff9500]/10 border-[#ff9500]/20"}`}
                     >
                       {item.status}
                     </span>
                   </div>
                 </div>
               ))}
+              {requests.filter((item) => `${item.id} ${item.reason} ${item.category} ${item.status}`.toLowerCase().includes(search.toLowerCase())).length === 0 && <p className="py-8 text-center text-sm text-[#86868b]">{search ? "No requests match your search." : "Your submitted leave requests will appear here."}</p>}
             </div>
           </div>
 
-          <div className="rounded-[20px] bg-white border border-black/[0.06] shadow-[0_2px_8px_rgba(0,0,0,0.02)] p-6 flex flex-col justify-between">
+          <div id="resources" className="rounded-[20px] bg-white border border-black/[0.06] shadow-[0_2px_8px_rgba(0,0,0,0.02)] p-6 flex flex-col justify-between">
             <div>
               <div className="flex items-center gap-2 text-xs font-semibold text-[#1d1d1f]">
                 <Calendar className="h-4 w-4 text-[#0071e3]" /> Upcoming
@@ -507,4 +507,8 @@ export default function AppleFacultyDashboard() {
       </main>
     </div>
   );
+}
+
+export default function FacultyDashboardPage() {
+  return <ProtectedContent roles={["faculty"]}><AppleFacultyDashboard /></ProtectedContent>;
 }

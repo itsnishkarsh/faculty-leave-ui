@@ -1,120 +1,54 @@
 "use client";
 
-import { useState } from "react";
+import Link from "next/link";
+import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Command, ArrowRight } from "lucide-react";
+import { ArrowRight, Command } from "lucide-react";
+import { getSession, roleHome, signIn } from "@/lib/auth-store";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [role, setRole] = useState<"faculty" | "hod">("faculty");
+  const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSignIn = (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
+  useEffect(() => {
+    const user = getSession();
+    if (user) router.replace(roleHome(user.role));
+  }, [router]);
 
-    // Simulate a brief network delay so the button feels realistic
-    setTimeout(() => {
-      if (role === "faculty") {
-        router.push("/"); // Sends them to the main dashboard
-      } else {
-        router.push("/hod"); // Sends them to the HOD queue
-      }
-    }, 600);
-  };
+  function handleSignIn(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError("");
+    setIsLoading(true);
+    const data = new FormData(event.currentTarget);
+    const user = signIn(String(data.get("email")), String(data.get("password")));
+    if (!user) {
+      setError("We couldn’t find an account with those details.");
+      setIsLoading(false);
+      return;
+    }
+    router.push(roleHome(user.role));
+  }
 
   return (
-    <div className="min-h-screen bg-[#f5f5f7] flex flex-col items-center justify-center p-4 text-[#1d1d1f] selection:bg-[#0071e3] selection:text-white">
-      {/* Branding */}
-      <div className="mb-8 flex flex-col items-center">
-        <div className="h-12 w-12 bg-[#1d1d1f] rounded-xl flex items-center justify-center text-white mb-4 shadow-lg">
-          <Command className="h-6 w-6" />
-        </div>
-        <h1 className="text-2xl font-semibold tracking-tight">
-          Faculty Portal
-        </h1>
-        <p className="text-sm text-[#86868b] mt-1">
-          Sign in with your institutional Apple ID
-        </p>
+    <main className="flex min-h-screen flex-col items-center justify-center bg-[#f5f5f7] p-4 text-[#1d1d1f]">
+      <div className="mb-7 flex flex-col items-center text-center">
+        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-[#1d1d1f] text-white shadow-lg"><Command className="h-6 w-6" /></div>
+        <h1 className="text-2xl font-semibold tracking-tight">Faculty Portal</h1>
+        <p className="mt-1 text-sm text-[#86868b]">Sign in to continue to your dashboard</p>
       </div>
-
-      {/* Login Card */}
-      <div className="w-full max-w-[360px] bg-white rounded-[24px] p-8 shadow-[0_4px_24px_rgba(0,0,0,0.04)] border border-black/[0.04]">
-        {/* The "Demo" Role Toggle (Simulating Backend Auth Check) */}
-        <div className="flex items-center p-1 bg-black/[0.04] rounded-lg mb-8">
-          <button
-            onClick={() => setRole("faculty")}
-            type="button"
-            className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${
-              role === "faculty"
-                ? "bg-white text-[#1d1d1f] shadow-sm"
-                : "text-[#86868b] hover:text-[#1d1d1f]"
-            }`}
-          >
-            Faculty
-          </button>
-          <button
-            onClick={() => setRole("hod")}
-            type="button"
-            className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${
-              role === "hod"
-                ? "bg-white text-[#1d1d1f] shadow-sm"
-                : "text-[#86868b] hover:text-[#1d1d1f]"
-            }`}
-          >
-            HOD / Admin
-          </button>
-        </div>
-
+      <div className="w-full max-w-[390px] rounded-[24px] border border-black/[0.04] bg-white p-8 shadow-[0_4px_24px_rgba(0,0,0,0.04)]">
         <form onSubmit={handleSignIn} className="space-y-4">
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-[#1d1d1f] ml-1">
-              Email ID
-            </label>
-            <input
-              type="email"
-              placeholder="name@institution.edu"
-              required
-              className="w-full px-4 py-2.5 text-sm rounded-xl bg-black/[0.03] border border-transparent focus:border-black/[0.1] focus:bg-white focus:outline-none transition-all placeholder:text-[#86868b]"
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-[#1d1d1f] ml-1">
-              Password
-            </label>
-            <input
-              type="password"
-              placeholder="••••••••"
-              required
-              className="w-full px-4 py-2.5 text-sm rounded-xl bg-black/[0.03] border border-transparent focus:border-black/[0.1] focus:bg-white focus:outline-none transition-all placeholder:text-[#86868b]"
-            />
-          </div>
-
-          <a
-            href="#"
-            className="inline-block text-xs text-[#0071e3] hover:underline ml-1 mt-1"
-          >
-            Forgotten your password?
-          </a>
-
-          <div className="pt-4">
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-medium text-white bg-[#0071e3] hover:bg-[#0077ed] rounded-full shadow-sm transition-all disabled:opacity-70"
-            >
-              {isLoading ? "Signing in..." : "Sign In"}
-              {!isLoading && <ArrowRight className="h-4 w-4" />}
-            </button>
-          </div>
+          <label className="block space-y-1.5 text-xs font-medium">Email address<input name="email" type="email" autoComplete="username" placeholder="name@institution.edu" required className="w-full rounded-xl border border-transparent bg-black/[0.03] px-4 py-2.5 text-sm font-normal outline-none transition focus:border-black/10 focus:bg-white" /></label>
+          <label className="block space-y-1.5 text-xs font-medium">Password<input name="password" type="password" autoComplete="current-password" placeholder="Enter your password" required className="w-full rounded-xl border border-transparent bg-black/[0.03] px-4 py-2.5 text-sm font-normal outline-none transition focus:border-black/10 focus:bg-white" /></label>
+          {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
+          <button disabled={isLoading} type="submit" className="flex w-full items-center justify-center gap-2 rounded-full bg-[#0071e3] py-2.5 text-sm font-medium text-white transition hover:bg-[#0077ed] disabled:opacity-70">{isLoading ? "Signing in…" : "Sign in"}{!isLoading && <ArrowRight className="h-4 w-4" />}</button>
         </form>
+        <p className="mt-5 text-center text-sm text-[#6e6e73]">New faculty member? <Link className="font-medium text-[#0071e3] hover:underline" href="/signup">Create an account</Link></p>
       </div>
-
-      {/* Footer Details */}
-      <p className="mt-8 text-xs text-[#86868b]">
-        Secure institutional login. Contact IT support for access issues.
-      </p>
-    </div>
+      <details className="mt-5 w-full max-w-[390px] rounded-xl border border-black/[0.06] bg-white/70 px-4 py-3 text-xs text-[#6e6e73]
+      "><summary className="cursor-pointer font-medium text-[#1d1d1f]">Demo accounts</summary><div className="mt-3 space-y-1.5"><p>Faculty: faculty@faculty.demo / Faculty123!</p><p>HOD: hod@faculty.demo / Hod123!</p><p>Admin: admin@faculty.demo / Admin123!</p></div></details>
+      <p className="mt-6 max-w-sm text-center text-xs leading-relaxed text-[#86868b]">Demo sign-in is stored in this browser. It is for project previews and is not secure authentication.</p>
+    </main>
   );
 }

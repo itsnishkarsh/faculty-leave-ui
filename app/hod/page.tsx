@@ -1,5 +1,7 @@
 "use client";
 
+import { useSyncExternalStore } from "react";
+
 import {
   Users,
   UserMinus,
@@ -19,8 +21,16 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
+import { getRequestsSnapshot, LeaveRequest, subscribeToRequests } from "@/lib/leave-store";
+import { downloadCsv } from "@/lib/download-csv";
+import { ProtectedContent, SignOutButton } from "@/components/protected-content";
 
-export default function HodDashboard() {
+function HodDashboard() {
+  const snapshot = useSyncExternalStore(subscribeToRequests, getRequestsSnapshot, () => "[]");
+  const requests = JSON.parse(snapshot) as LeaveRequest[];
+
+  const pendingCount = requests.filter((request) => request.status === "Pending").length;
+
   const todayLeaves = [
     {
       name: "Dr. Arvind Sharma",
@@ -78,6 +88,7 @@ export default function HodDashboard() {
             <div className="h-7 w-7 rounded-full bg-[#1d1d1f] text-white flex items-center justify-center text-xs font-medium">
               HOD
             </div>
+            <SignOutButton />
           </div>
         </div>
       </header>
@@ -90,7 +101,7 @@ export default function HodDashboard() {
               Computer Science Department
             </p>
             <h1 className="text-3xl font-semibold tracking-tight text-[#1d1d1f] mt-1">
-              Today's Overview
+              Today&apos;s Overview
             </h1>
           </div>
           <p className="text-sm font-medium text-[#86868b]">
@@ -141,7 +152,7 @@ export default function HodDashboard() {
                 <span className="text-xs font-semibold">Action Required</span>
               </div>
               <div className="flex items-baseline gap-2">
-                <span className="text-4xl font-semibold tracking-tight">3</span>
+                <span className="text-4xl font-semibold tracking-tight">{pendingCount}</span>
                 <span className="text-xs text-white/80">pending requests</span>
               </div>
             </div>
@@ -244,7 +255,7 @@ export default function HodDashboard() {
                 6-month overview of departmental absences
               </p>
             </div>
-            <button className="flex items-center gap-2 p-2 rounded-xl bg-[#f5f5f7] hover:bg-black/[0.05] transition-colors text-xs font-medium text-[#1d1d1f]">
+            <button onClick={() => downloadCsv("department-leave-trends.csv", ["Month", "Casual", "Medical", "On Duty"], leaveTrendsData.map((item) => [item.month, String(item.Casual), String(item.Medical), String(item["On Duty"])]))} className="flex items-center gap-2 p-2 rounded-xl bg-[#f5f5f7] hover:bg-black/[0.05] transition-colors text-xs font-medium text-[#1d1d1f]">
               <BarChart2 className="h-4 w-4 text-[#86868b]" />
               Download Report
             </button>
@@ -298,4 +309,8 @@ export default function HodDashboard() {
       </main>
     </div>
   );
+}
+
+export default function HodDashboardPage() {
+  return <ProtectedContent roles={["hod"]}><HodDashboard /></ProtectedContent>;
 }
