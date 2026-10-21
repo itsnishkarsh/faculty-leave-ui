@@ -22,6 +22,8 @@ New Auth sign-ups receive the `faculty` role. Administrators assign departments 
 
 HOD accounts must have a department. HODs can see and review requests only for faculty assigned to the same department. The final administrator cannot be demoted.
 
+Optional demo account seeding is disabled by default. To turn it on, set `NEXT_PUBLIC_DEMO_SEEDING_ENABLED=true`, `DEMO_SEEDING_ENABLED=true`, `DEMO_ACCOUNT_PASSWORD=12345678`, and the server-only `SUPABASE_SECRET_KEY` in the local/Vercel environment. The Admin console then creates 33 faculty logins (`faculty1@tcet.test` through `faculty33@tcet.test`, three per department) and 11 department-specific HOD logins, with 99 labeled sample leave requests and conversations. The existing sole administrator is retained; the seeder refuses to run if more than one administrator exists and never creates another. `.test` is reserved for testing and does not receive email, while the accounts can sign in with the shared password. These are demo credentials only. Keep seeding disabled unless you intentionally want demo records in Supabase, and disable it again after setup. Never expose the Supabase secret key with a `NEXT_PUBLIC_` name.
+
 ## Deployment
 
 The GitHub repository is `itsnishkarsh/faculty-leave-ui`. Import it into Vercel and add `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` in the project's environment variables. Set the matching Supabase Auth Site URL and redirect URLs for the deployed domain.
