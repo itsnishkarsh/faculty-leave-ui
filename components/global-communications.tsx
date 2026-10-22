@@ -57,7 +57,7 @@ export function GlobalCommunications() {
     if (!session) return;
     const channel = getSupabaseBrowserClient().channel("portal-online-members", { config: { presence: { key: session.id } } });
     const publishPresence = () => {
-      const state = channel.presenceState<Record<string, { userId?: string }>>();
+      const state = channel.presenceState<{ userId?: string }>();
       const userIds = [...new Set(Object.values(state).flatMap((presences) => presences.map((presence) => presence.userId).filter((id): id is string => Boolean(id))))];
       window.dispatchEvent(new CustomEvent("portal-presence-update", { detail: { userIds } }));
     };
