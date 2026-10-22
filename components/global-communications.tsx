@@ -53,6 +53,26 @@ export function GlobalCommunications() {
 
   useEffect(() => { soundEnabled.current = soundOn; }, [soundOn]);
 
+  useEffect(() => {
+    if (!session) return;
+    const channel = getSupabaseBrowserClient().channel("portal-online-members", { config: { presence: { key: session.id } } });
+    const publishPresence = () => {
+      const state = channel.presenceState<Record<string, { userId?: string }>>();
+      const userIds = [...new Set(Object.values(state).flatMap((presences) => presences.map((presence) => presence.userId).filter((id): id is string => Boolean(id))))];
+      window.dispatchEvent(new CustomEvent("portal-presence-update", { detail: { userIds } }));
+    };
+    channel.on("presence", { event: "sync" }, publishPresence)
+      .on("presence", { event: "join" }, publishPresence)
+      .on("presence", { event: "leave" }, publishPresence)
+      .subscribe(async (status) => {
+        if (status === "SUBSCRIBED") {
+          await channel.track({ userId: session.id, onlineAt: new Date().toISOString() });
+          publishPresence();
+        }
+      });
+    return () => { void getSupabaseBrowserClient().removeChannel(channel); };
+  }, [session]);
+
   const stopRingtone = useCallback(() => {
     if (ringTimer.current !== null) window.clearInterval(ringTimer.current);
     ringTimer.current = null;
@@ -69,7 +89,7 @@ export function GlobalCommunications() {
       oscillator.type = direction === "outgoing" ? "sine" : "triangle";
       oscillator.frequency.setValueAtTime(frequency, start);
       gain.gain.setValueAtTime(0.0001, start);
-      gain.gain.exponentialRampToValueAtTime(direction === "outgoing" ? 0.2 : 0.07, start + 0.025);
+      gain.gain.exponentialRampToValueAtTime(direction === "outgoing" ? 0.42 : 0.07, start + 0.025);
       gain.gain.exponentialRampToValueAtTime(0.0001, start + (direction === "outgoing" ? 0.19 : 0.16));
       oscillator.connect(gain);
       gain.connect(ctx.destination);
@@ -549,8 +569,17 @@ export function GlobalCommunications() {
         if (callRef.current?.id === row.id && (row.status === "declined" || row.status === "ended")) cleanupCall(true);
       })
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "voice_calls", filter: `callee_id=eq.${session.id}` }, (event) => {
-        const row = event.new as { id: string; status: string };
-        if (callRef.current?.id === row.id && (row.status === "declined" || row.status === "ended")) cleanupCall(true);
+        const row = event.new as { id: string; caller_id: string; status: string };
+        const current = callRef.current;
+        if (current?.id === row.id && (row.status === "declined" || row.status === "ended")) {
+          if (current.direction === "incoming" && row.status === "ended") {
+            const missed: CallInfo = { ...current, direction: "missed" };
+            cleanupCall();
+            callRef.current = missed;
+            setCall(missed);
+            setNotice(`${current.peerName} could not reach you. You can message them.`);
+          } else cleanupCall(true);
+        }
       }).subscribe();
     void supabase.from("voice_calls").select("id, caller_id, created_at").eq("callee_id", session.id).eq("status", "ringing").gte("created_at", new Date(Date.now() - 60_000).toISOString()).order("created_at", { ascending: false }).limit(1).maybeSingle()
       .then(({ data }) => { if (data && active && !callRef.current) { const info: CallInfo = { id: data.id, peerId: data.caller_id, peerName: membersRef.current.get(data.caller_id) ?? "Portal member", direction: "incoming" }; callRef.current = info; setCall(info); ping(); } });

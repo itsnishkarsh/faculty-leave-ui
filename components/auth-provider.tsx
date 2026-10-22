@@ -18,7 +18,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const detail = (event as CustomEvent<AuthState>).detail;
       if (active) setState({ loading: false, session: detail.session, error: detail.error });
     };
+    const handleProfilePhotoUpdated = (event: Event) => {
+      const detail = (event as CustomEvent<{ avatarUrl: string }>).detail;
+      if (active && detail?.avatarUrl) setState((current) => current.session ? { ...current, session: { ...current.session, avatarUrl: detail.avatarUrl } } : current);
+    };
     window.addEventListener("faculty-portal-session", handlePortalSession);
+    window.addEventListener("portal-profile-photo-updated", handleProfilePhotoUpdated);
 
     const applySession = async (session: Session | null) => {
       if (!session?.user) {
@@ -46,6 +51,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       active = false;
       unsubscribe?.();
       window.removeEventListener("faculty-portal-session", handlePortalSession);
+      window.removeEventListener("portal-profile-photo-updated", handleProfilePhotoUpdated);
     };
   }, []);
 

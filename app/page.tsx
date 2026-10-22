@@ -44,6 +44,7 @@ import { LeaveRequest, readRequests, saveRequest, subscribeToLeaveRequests } fro
 import { downloadCsv } from "@/lib/download-csv";
 import { useAuth } from "@/components/auth-provider";
 import { ProtectedContent, SignOutButton } from "@/components/protected-content";
+import { ProfilePhotoUploader } from "@/components/profile-photo-uploader";
 
 // 1. Define the validation rules using Zod
 const leaveFormSchema = z.object({
@@ -165,9 +166,7 @@ function AppleFacultyDashboard() {
                 className="w-48 pl-8 pr-3 py-1 text-xs rounded-full bg-black/[0.04] border border-transparent focus:border-black/[0.1] focus:bg-white focus:outline-none transition-all placeholder:text-[#86868b]"
               />
             </div>
-            <div className="h-7 w-7 rounded-full bg-[#1d1d1f] text-white flex items-center justify-center text-xs font-medium">
-              {(session?.name || "F").split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase()}
-            </div>
+            <ProfilePhotoUploader />
             <SignOutButton />
           </div>
         </div>
