@@ -9,6 +9,7 @@ import { useAuth } from "@/components/auth-provider";
 import { DirectoryMember, DirectMessage, markDirectMessagesRead, readDirectory, readDirectMessages, sendDirectMessage, subscribeToDirectMessages } from "@/lib/direct-messaging";
 import { PortalAnnouncement, readAnnouncements, sendAnnouncement, subscribeToAnnouncements } from "@/lib/announcement-store";
 import { DEPARTMENTS } from "@/lib/departments";
+import { readVoiceMessages, subscribeToVoiceMessages, VoiceMessage } from "@/lib/voice-message-store";
 
 function roleName(role: string) { return role === "hod" ? "HOD" : role === "admin" ? "Admin" : "Faculty"; }
 
@@ -17,6 +18,7 @@ function MessagesPage() {
   const [members, setMembers] = useState<DirectoryMember[]>([]);
   const [selectedId, setSelectedId] = useState("");
   const [messages, setMessages] = useState<DirectMessage[]>([]);
+  const [voiceMessages, setVoiceMessages] = useState<VoiceMessage[]>([]);
   const [draft, setDraft] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -29,10 +31,11 @@ function MessagesPage() {
   const selected = useMemo(() => members.find((member) => member.id === selectedId), [members, selectedId]);
 
   const loadMessages = useCallback(async () => {
-    if (!session || !selectedId) { setMessages([]); return; }
+    if (!session || !selectedId) { setMessages([]); setVoiceMessages([]); return; }
     try {
-      const items = await readDirectMessages(session.id, selectedId);
+      const [items, recordings] = await Promise.all([readDirectMessages(session.id, selectedId), readVoiceMessages(session.id, selectedId)]);
       setMessages(items);
+      setVoiceMessages(recordings);
       await markDirectMessagesRead(session.id, selectedId);
       setError("");
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Unable to load messages."); }
@@ -51,7 +54,8 @@ function MessagesPage() {
     if (!session) return;
     const timer = window.setTimeout(() => { void loadMessages(); }, 0);
     const unsubscribe = subscribeToDirectMessages(session.id, () => { void loadMessages(); });
-    return () => { window.clearTimeout(timer); unsubscribe(); };
+    const unsubscribeVoice = subscribeToVoiceMessages(session.id, () => { void loadMessages(); });
+    return () => { window.clearTimeout(timer); unsubscribe(); unsubscribeVoice(); };
   }, [session, loadMessages]);
 
   const loadBroadcasts = useCallback(async () => {
@@ -102,7 +106,7 @@ function MessagesPage() {
         <aside className="border-b border-black/[0.06] p-4 md:border-b-0 md:border-r"><h2 className="px-2 pb-3 text-sm font-semibold">Portal members</h2><div className="max-h-56 space-y-1 overflow-y-auto md:max-h-[60vh]">{loading && <p className="p-3 text-sm text-[#86868b]">Loading members…</p>}{members.map((member) => <button key={member.id} onClick={() => setSelectedId(member.id)} className={`w-full rounded-xl px-3 py-2.5 text-left ${selectedId === member.id ? "bg-blue-50 text-blue-900" : "hover:bg-[#f5f5f7]"}`}><span className="block text-sm font-medium">{member.name}</span><span className="mt-0.5 block text-xs text-[#86868b]">{roleName(member.role)}{member.department ? ` · ${member.department}` : ""}</span></button>)}</div></aside>
         <div className="flex min-h-[55vh] flex-col">
           <div className="flex items-center justify-between border-b border-black/[0.06] px-5 py-4"><div className="flex items-center gap-2"><MessageCircle className="h-4 w-4 text-[#0071e3]"/><div><h2 className="text-sm font-semibold">{selected?.name ?? "Choose a member"}</h2><p className="text-xs text-[#86868b]">{selected ? `${roleName(selected.role)}${selected.department ? ` · ${selected.department}` : ""}` : "No members found"}</p></div></div><button disabled={!selected} onClick={callMember} className="inline-flex h-9 items-center gap-2 rounded-xl border border-black/10 px-3 text-xs font-medium hover:bg-[#f5f5f7] disabled:opacity-40"><Phone className="h-4 w-4"/> Voice call</button></div>
-          <div className="flex-1 space-y-3 overflow-y-auto bg-[#fafafa] p-4">{messages.map((message) => { const mine = message.senderId === session?.id; return <div key={message.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}><article className={`max-w-[85%] rounded-2xl px-4 py-3 ${mine ? "rounded-br-md bg-[#0071e3] text-white" : "rounded-bl-md border border-black/[0.05] bg-white"}`}><p className="whitespace-pre-wrap text-sm">{message.body}</p><time className={`mt-1 block text-right text-[10px] ${mine ? "text-white/70" : "text-[#86868b]"}`}>{new Date(message.createdAt).toLocaleString("en-IN", { dateStyle: "short", timeStyle: "short" })}</time></article></div>; })}{!loading && selected && messages.length === 0 && <p className="py-12 text-center text-sm text-[#86868b]">Start a private conversation with {selected.name}.</p>}</div>
+          <div className="flex-1 space-y-3 overflow-y-auto bg-[#fafafa] p-4">{voiceMessages.map((message) => { const mine = message.senderId === session?.id; return <div key={message.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}><article className={`max-w-[85%] rounded-2xl px-4 py-3 ${mine ? "rounded-br-md bg-blue-50" : "rounded-bl-md border border-black/[0.05] bg-white"}`}><p className="mb-2 text-xs font-medium text-[#55555a]">{mine ? "Voice message sent" : "Voice message"} · {new Date(message.createdAt).toLocaleString("en-IN", { dateStyle: "short", timeStyle: "short" })}</p><audio controls preload="none" src={message.audioUrl} aria-label={`Voice message from ${mine ? "you" : selected?.name ?? "member"}`} className="max-w-full"/><p className="mt-1 text-[10px] text-[#86868b]">{Math.floor(message.durationSeconds / 60)}:{String(message.durationSeconds % 60).padStart(2, "0")}</p></article></div>; })}{messages.map((message) => { const mine = message.senderId === session?.id; return <div key={message.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}><article className={`max-w-[85%] rounded-2xl px-4 py-3 ${mine ? "rounded-br-md bg-[#0071e3] text-white" : "rounded-bl-md border border-black/[0.05] bg-white"}`}><p className="whitespace-pre-wrap text-sm">{message.body}</p><time className={`mt-1 block text-right text-[10px] ${mine ? "text-white/70" : "text-[#86868b]"}`}>{new Date(message.createdAt).toLocaleString("en-IN", { dateStyle: "short", timeStyle: "short" })}</time></article></div>; })}{!loading && selected && messages.length === 0 && voiceMessages.length === 0 && <p className="py-12 text-center text-sm text-[#86868b]">Start a private conversation with {selected.name}.</p>}</div>
           <form onSubmit={submit} className="flex items-end gap-2 border-t border-black/[0.06] p-3"><textarea value={draft} onChange={(event) => setDraft(event.target.value)} rows={2} maxLength={4000} placeholder="Write a message…" className="min-h-11 flex-1 resize-y rounded-xl border border-black/10 px-3 py-2.5 text-sm outline-none focus:border-[#0071e3]"/><button disabled={sending || !draft.trim() || !selected} className="inline-flex h-11 items-center gap-2 rounded-xl bg-[#0071e3] px-4 text-sm font-medium text-white disabled:opacity-50">{sending ? <LoaderCircle className="h-4 w-4 animate-spin"/> : <Send className="h-4 w-4"/>}<span className="hidden sm:inline">Send</span></button></form>
         </div>
       </section>
