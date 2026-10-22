@@ -340,7 +340,7 @@ export function GlobalCommunications() {
       callRef.current = info; setCall(info);
       ringTimeout.current = window.setTimeout(() => {
         const current = callRef.current;
-        if (current?.id !== data.id || current.direction !== "outgoing") return;
+        if (!current || current.id !== data.id || current.direction !== "outgoing") return;
         const missed: CallInfo = { ...current, direction: "missed" };
         cleanupCall();
         callRef.current = missed;
