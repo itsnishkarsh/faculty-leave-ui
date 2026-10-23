@@ -141,11 +141,11 @@ function AppleFacultyDashboard() {
   return (
     <div className="min-h-screen pb-20">
       <header className="sticky top-0 z-50 border-b border-black/[0.06] bg-white/80 backdrop-blur-xl">
-        <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <span className="inline-flex items-center gap-2 font-semibold text-sm tracking-tight text-[#1d1d1f]"><Image src="/icon.png" alt="" width={30} height={30} className="h-7 w-7 rounded-lg" />EduLeave Portal</span>
-            <div className="h-4 w-px bg-black/[0.08]" />
-            <nav className="flex items-center gap-5 text-xs text-[#86868b] font-normal">
+        <div className="mx-auto flex min-h-14 max-w-6xl flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-2 sm:flex-nowrap sm:px-6">
+          <div className="flex w-full min-w-0 flex-wrap items-center gap-3 sm:w-auto sm:flex-nowrap sm:gap-6">
+            <span className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap text-xs font-semibold tracking-tight text-[#1d1d1f] sm:text-sm"><Image src="/icon.png" alt="" width={30} height={30} className="h-7 w-7 rounded-lg" />EduLeave Portal</span>
+            <div className="hidden h-4 w-px bg-black/[0.08] sm:block" />
+            <nav className="order-3 flex w-full basis-full items-center gap-5 overflow-x-auto whitespace-nowrap pb-1 text-xs font-normal text-[#86868b] sm:order-none sm:w-auto sm:basis-auto sm:overflow-visible sm:pb-0">
               <a href="#overview" className="text-[#1d1d1f] font-medium transition-colors">
                 Overview
               </a>
@@ -155,7 +155,7 @@ function AppleFacultyDashboard() {
               <a href="#resources" className="hover:text-[#1d1d1f] transition-colors">Guidance</a>
             </nav>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="ml-0 flex w-full items-center justify-between gap-2 sm:ml-auto sm:w-auto sm:justify-start sm:gap-3">
             <div className="relative">
               <Search className="h-3.5 w-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#86868b]" />
               <input
@@ -163,7 +163,7 @@ function AppleFacultyDashboard() {
                 placeholder="Search requests..."
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                className="w-48 pl-8 pr-3 py-1 text-xs rounded-full bg-black/[0.04] border border-transparent focus:border-black/[0.1] focus:bg-white focus:outline-none transition-all placeholder:text-[#86868b]"
+                className="w-28 rounded-full border border-transparent bg-black/[0.04] py-1 pl-8 pr-2 text-xs transition-all placeholder:text-[#86868b] focus:border-black/[0.1] focus:bg-white focus:outline-none sm:w-48 sm:pr-3"
               />
             </div>
             <ProfilePhotoUploader />
@@ -172,7 +172,7 @@ function AppleFacultyDashboard() {
         </div>
       </header>
 
-      <main id="overview" className="max-w-6xl mx-auto px-6 pt-10 space-y-8">
+      <main id="overview" className="mx-auto max-w-6xl space-y-6 px-4 pt-7 sm:space-y-8 sm:px-6 sm:pt-10">
         {notice && <div role="status" className="flex items-center justify-between rounded-xl border border-[#34c759]/20 bg-[#34c759]/10 px-4 py-3 text-sm text-[#1d8a42]">{notice}<button onClick={() => setNotice("")} aria-label="Dismiss message" className="font-semibold">×</button></div>}
         {requestError && <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{requestError}</p>}
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
@@ -180,19 +180,19 @@ function AppleFacultyDashboard() {
             <p className="text-xs font-medium uppercase tracking-wider text-[#86868b]">
               {session?.department || "Faculty workspace"}
             </p>
-            <h1 className="text-3xl font-semibold tracking-tight text-[#1d1d1f] mt-1">
+            <h1 className="mt-1 break-words text-2xl font-semibold tracking-tight text-[#1d1d1f] sm:text-3xl">
               {session?.name ? `Welcome, ${session.name}` : "Your leave activity"}
             </h1>
           </div>
 
           <div className="flex items-center gap-3">
-            <button onClick={downloadSummary} className="px-3.5 py-1.5 text-xs font-medium text-[#1d1d1f] bg-white border border-black/[0.08] rounded-full shadow-[0_1px_2px_rgba(0,0,0,0.04)] hover:bg-black/[0.02] transition-colors">
+              <button onClick={downloadSummary} className="min-h-10 flex-1 px-3.5 py-2 text-xs font-medium text-[#1d1d1f] bg-white border border-black/[0.08] rounded-full shadow-[0_1px_2px_rgba(0,0,0,0.04)] hover:bg-black/[0.02] transition-colors sm:flex-none">
               Download Summary
             </button>
 
             <Sheet>
               <SheetTrigger asChild>
-                <button className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-medium text-white bg-[#0071e3] hover:bg-[#0077ed] rounded-full shadow-sm transition-colors">
+                <button className="flex min-h-10 flex-1 items-center justify-center gap-1.5 rounded-full bg-[#0071e3] px-4 py-2 text-xs font-medium text-white shadow-sm transition-colors hover:bg-[#0077ed] sm:flex-none">
                   <Plus className="h-3.5 w-3.5 stroke-[2.5]" />
                   Apply for Leave
                 </button>
