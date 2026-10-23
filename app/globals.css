@@ -129,3 +129,95 @@
     @apply font-sans;
   }
 }
+
+.brand-loader {
+  display: grid;
+  min-height: 100svh;
+  place-items: center;
+  overflow: hidden;
+  padding: 2rem 1.25rem;
+  background:
+    radial-gradient(ellipse at 50% 43%, rgb(0 113 227 / 9%), transparent 32%),
+    radial-gradient(ellipse at 50% 100%, rgb(53 188 182 / 8%), transparent 42%),
+    #f5f5f7;
+  color: #1d1d1f;
+}
+
+.brand-loader__content {
+  display: flex;
+  width: min(100%, 22rem);
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  animation: loader-arrive 650ms cubic-bezier(.2,.8,.2,1) both;
+}
+
+.brand-loader__emblem {
+  width: 10.5rem;
+  height: 10.5rem;
+  margin-bottom: 1.4rem;
+  overflow: visible;
+  filter: drop-shadow(0 12px 22px rgb(27 59 84 / 12%));
+  animation: loader-float 3.2s ease-in-out infinite;
+}
+
+.brand-loader__sun-group { animation: loader-sun-rise 4s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+.brand-loader__sun-rays { animation: loader-sun-glow 4s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+.brand-loader__palm { animation: loader-palm-sway 3.6s ease-in-out infinite; transform-box: view-box; transform-origin: 54px 125px; }
+.brand-loader__waves { animation: loader-waves 3s ease-in-out infinite; }
+
+.brand-loader__eyebrow {
+  margin: 0;
+  color: #7d858d;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+}
+
+.brand-loader__label {
+  margin: 0.55rem 0 0;
+  color: #263b4a;
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.brand-loader__ellipsis { display: inline-block; width: 1em; text-align: left; animation: loader-dots 1.25s steps(4, end) infinite; }
+
+.brand-loader__progress {
+  width: 8.5rem;
+  height: 3px;
+  margin-top: 1.25rem;
+  overflow: hidden;
+  border-radius: 99px;
+  background: rgb(36 124 161 / 12%);
+}
+
+.brand-loader__progress span {
+  display: block;
+  width: 38%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #0878d1, #26aaa4, #d8ad3f);
+  animation: loader-progress 1.6s ease-in-out infinite;
+}
+
+@keyframes loader-arrive { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes loader-sun-rise { 0%, 100% { transform: translateY(3px); } 50% { transform: translateY(-3px); } }
+@keyframes loader-sun-glow { 0%, 100% { opacity: .78; } 50% { opacity: 1; } }
+@keyframes loader-palm-sway { 0%, 100% { transform: rotate(-1deg); } 50% { transform: rotate(2deg); } }
+@keyframes loader-waves { 0%, 100% { transform: translateY(1px); } 50% { transform: translateY(-1px); } }
+@keyframes loader-float { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-3px) scale(1.012); } }
+@keyframes loader-dots { 0% { opacity: .25; } 50% { opacity: 1; } 100% { opacity: .25; } }
+@keyframes loader-progress { 0% { transform: translateX(-115%); } 55% { transform: translateX(95%); } 100% { transform: translateX(290%); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .brand-loader__content,
+  .brand-loader__emblem,
+  .brand-loader__sun-group,
+  .brand-loader__sun-rays,
+  .brand-loader__palm,
+  .brand-loader__waves,
+  .brand-loader__ellipsis,
+  .brand-loader__progress span { animation: none; }
+  .brand-loader__progress span { width: 55%; margin-inline: auto; }
+}

@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { roleHome, signOut, UserRole } from "@/lib/auth-store";
 import { useAuth } from "@/components/auth-provider";
+import { BrandLoader } from "@/components/brand-loader";
 
 export function ProtectedContent({ roles, children }: { roles: UserRole[]; children: React.ReactNode }) {
   const router = useRouter();
@@ -17,7 +18,7 @@ export function ProtectedContent({ roles, children }: { roles: UserRole[]; child
   }, [loading, rolesKey, router, session]);
 
   if (loading || !session || !rolesKey.split(",").includes(session.role)) {
-    return <div className="min-h-screen bg-[#f5f5f7]" aria-label="Loading account" />;
+    return <BrandLoader label="Checking your account" />;
   }
   return <>{children}</>;
 }

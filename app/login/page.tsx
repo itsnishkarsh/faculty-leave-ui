@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import { roleHome, signIn } from "@/lib/auth-store";
 import { useAuth } from "@/components/auth-provider";
+import { BrandLoader } from "@/components/brand-loader";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -18,13 +19,26 @@ export default function LoginPage() {
     if (!authLoading && session) router.replace(roleHome(session.role));
   }, [authLoading, router, session]);
 
+  if (isLoading) return <BrandLoader label="Signing in" />;
+
   async function handleSignIn(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
     setIsLoading(true);
+    const loadingStartedAt = performance.now();
+    const keepLoaderVisible = () => new Promise<void>((resolve) => {
+      window.setTimeout(resolve, Math.max(0, 650 - (performance.now() - loadingStartedAt)));
+    });
     const data = new FormData(event.currentTarget);
+    let authTimeout: number | undefined;
     try {
-      const result = await signIn(String(data.get("email")), String(data.get("password")));
+      const result = await Promise.race([
+        signIn(String(data.get("email")), String(data.get("password"))),
+        new Promise<never>((_, reject) => {
+          authTimeout = window.setTimeout(() => reject(new Error("Sign-in is taking longer than expected. Check your connection and try again.")), 20000);
+        }),
+      ]);
+      await keepLoaderVisible();
       if (!result.session) {
         setError(result.error ?? "Sign in failed.");
         setIsLoading(false);
@@ -32,8 +46,11 @@ export default function LoginPage() {
       }
       router.push(roleHome(result.session.role));
     } catch (cause) {
+      await keepLoaderVisible();
       setError(cause instanceof Error ? cause.message : "Unable to connect to Supabase.");
       setIsLoading(false);
+    } finally {
+      if (authTimeout !== undefined) window.clearTimeout(authTimeout);
     }
   }
 
